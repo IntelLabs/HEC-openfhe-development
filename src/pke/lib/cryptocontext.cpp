@@ -108,7 +108,7 @@ std::shared_ptr<std::map<usint, EvalKey<Element>>> CryptoContextImpl<Element>::E
     auto evalKeys = GetScheme()->EvalSumColsKeyGen(privateKey, publicKey);
     InsertEvalAutomorphismKey(evalKeys, privateKey->GetKeyTag());
 
-    return evalKeys; // TODO (dsuponit): the return statement will stay for some time to ensure backward compatibility
+    return evalKeys;  // TODO (dsuponit): the return statement will stay for some time to ensure backward compatibility
 }
 
 template <typename Element>
@@ -273,7 +273,7 @@ Ciphertext<Element> CryptoContextImpl<Element>::EvalSumRows(ConstCiphertext<Elem
                                                             const std::map<usint, EvalKey<Element>>& evalSumKeys,
                                                             usint subringDim) const {
     ValidateCiphertext(ciphertext);
-    
+
     auto rv = GetScheme()->EvalSumRows(ciphertext, rowSize, evalSumKeys, subringDim);
     return rv;
 }
@@ -737,6 +737,7 @@ void CryptoContextImpl<DCRTPoly>::RecoverSharedKey(PrivateKey<DCRTPoly>& sk,
 
     // vector of indexes of the clients
     std::vector<uint32_t> client_indexes;
+    client_indexes.reserve(N);
     for (uint32_t i = 1; i <= N; ++i) {
         if (sk_shares.find(i) != sk_shares.end())
             client_indexes.push_back(i);
