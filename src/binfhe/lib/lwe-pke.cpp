@@ -47,12 +47,12 @@ NativeInteger LWEEncryptionScheme::RoundqQ(const NativeInteger& v, const NativeI
 
 LWEPrivateKey LWEEncryptionScheme::KeyGen(usint size, const NativeInteger& modulus) const {
     TernaryUniformGeneratorImpl<NativeVector> tug;
-    return std::make_shared<LWEPrivateKeyImpl>(LWEPrivateKeyImpl(tug.GenerateVector(size, modulus)));
+    return std::make_shared<LWEPrivateKeyImpl>(tug.GenerateVector(size, modulus));
 }
 
 LWEPrivateKey LWEEncryptionScheme::KeyGenGaussian(usint size, const NativeInteger& modulus) const {
     DiscreteGaussianGeneratorImpl<NativeVector> dgg;
-    return std::make_shared<LWEPrivateKeyImpl>(LWEPrivateKeyImpl(dgg.GenerateVector(size, modulus)));
+    return std::make_shared<LWEPrivateKeyImpl>(dgg.GenerateVector(size, modulus));
 }
 
 // size is the ring dimension N, modulus is the large Q used in RGSW encryption of bootstrapping.
