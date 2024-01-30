@@ -383,24 +383,26 @@ protected:
 
             auto ccLWE = std::make_shared<BinFHEContext>();
             ccLWE->BinFHEContext::GenerateBinFHEContext(TOY, false, testData.logQ, 0, GINX, false);
-            LWEPrivateKey lwesk;
-            lwesk = ccLWE->KeyGen();
+            LWEPrivateKey lwesk = ccLWE->KeyGen();
 
-            auto modulus_LWE        = 1 << testData.logQ;
-            uint32_t pLWE           = modulus_LWE / (2 * ccLWE->GetBeta().ConvertToInt());  // larger precision
-            std::vector<int32_t> x1 = {0, 0, 1, 1, 0, 0, 1, 1};
-            std::vector<int32_t> x2 = {0, -1, 2, -3, 4, -8, 16, -32};
+            auto modulus_LWE = 1 << testData.logQ;
+            uint32_t pLWE    = modulus_LWE / (2 * ccLWE->GetBeta().ConvertToInt());  // larger precision
+            std::vector<int32_t> x1(testData.slots);
+            std::vector<int32_t> x1_values{0, 0, 1, 1, 0, 0, 1, 1};
+            std::copy(x1_values.begin(), x1_values.end(), x1.begin());
+            std::vector<int32_t> x2(testData.slots);
+            std::vector<int32_t> x2_values{0, -1, 2, -3, 4, -8, 16, -32};
+            std::copy(x2_values.begin(), x2_values.end(), x2.begin());
             std::vector<LWECiphertext> ctxtsLWE1(testData.slots);
+            // TODO: Andreea: number of slots is 32 here
             for (uint32_t i = 0; i < testData.slots; i++) {
-                ctxtsLWE1[i] =
-                    ccLWE->Encrypt(lwesk, x1[i], FRESH, 4,
-                                   modulus_LWE);  // encrypted under small plantext modulus p = 4 and ciphertext modulus
+                // encrypted under small plantext modulus p = 4 and ciphertext modulus
+                ctxtsLWE1[i] = ccLWE->Encrypt(lwesk, x1[i], FRESH, 4, modulus_LWE);
             }
             std::vector<LWECiphertext> ctxtsLWE2(testData.slots);
             for (uint32_t i = 0; i < testData.slots; i++) {
-                ctxtsLWE2[i] = ccLWE->Encrypt(
-                    lwesk, x2[i], FRESH, pLWE,
-                    modulus_LWE);  // encrypted under larger plaintext modulus and large ciphertext modulus
+                // encrypted under larger plaintext modulus and large ciphertext modulus
+                ctxtsLWE2[i] = ccLWE->Encrypt(lwesk, x2[i], FRESH, pLWE, modulus_LWE);
             }
 
             cc->EvalFHEWtoCKKSSetup(ccLWE, testData.slots, testData.logQ);
@@ -480,11 +482,8 @@ protected:
             auto pLWE        = modulus_LWE / (2 * ccLWE->GetBeta().ConvertToInt());
 
             const auto cryptoParams = std::dynamic_pointer_cast<CryptoParametersCKKSRNS>(cc->GetCryptoParameters());
-            uint32_t init_level     = 0;
-            if (cryptoParams->GetScalingTechnique() == FLEXIBLEAUTOEXT)
-                init_level = 1;
-            double scaleSignFHEW = 8.0;
-
+            uint32_t init_level     = (cryptoParams->GetScalingTechnique() == FLEXIBLEAUTOEXT) ? 1 : 0;
+            double scaleSignFHEW    = 8.0;
             cc->EvalCompareSwitchPrecompute(pLWE, init_level, scaleSignFHEW);
 
             Plaintext pDiff;
@@ -551,10 +550,7 @@ protected:
             auto pLWE        = modulus_LWE / (2 * ccLWE->GetBeta().ConvertToInt());
 
             const auto cryptoParams = std::dynamic_pointer_cast<CryptoParametersCKKSRNS>(cc->GetCryptoParameters());
-
-            uint32_t init_level = 0;
-            if (cryptoParams->GetScalingTechnique() == FLEXIBLEAUTOEXT)
-                init_level = 1;
+            uint32_t init_level     = (cryptoParams->GetScalingTechnique() == FLEXIBLEAUTOEXT) ? 1 : 0;
             cc->EvalCompareSwitchPrecompute(pLWE, init_level, scaleSign);
 
             std::vector<double> x1 = {-1.1, -1.05, 5.0, 6.0, -1.0, 2.0, 8.0, -1.0};
@@ -660,10 +656,7 @@ protected:
             auto pLWE        = modulus_LWE / (2 * ccLWE->GetBeta().ConvertToInt());
 
             const auto cryptoParams = std::dynamic_pointer_cast<CryptoParametersCKKSRNS>(cc->GetCryptoParameters());
-
-            uint32_t init_level = 0;
-            if (cryptoParams->GetScalingTechnique() == FLEXIBLEAUTOEXT)
-                init_level = 1;
+            uint32_t init_level     = (cryptoParams->GetScalingTechnique() == FLEXIBLEAUTOEXT) ? 1 : 0;
             cc->EvalCompareSwitchPrecompute(pLWE, init_level, scaleSign);
 
             std::vector<double> x1 = {-1.1, -1.05, 5.0, 6.0, -1.0, 2.0, 8.0, -1.0};
@@ -805,10 +798,7 @@ protected:
             auto pLWE        = modulus_LWE / (2 * ccLWE->GetBeta().ConvertToInt());
 
             const auto cryptoParams = std::dynamic_pointer_cast<CryptoParametersCKKSRNS>(cc->GetCryptoParameters());
-
-            uint32_t init_level = 0;
-            if (cryptoParams->GetScalingTechnique() == FLEXIBLEAUTOEXT)
-                init_level = 1;
+            uint32_t init_level     = (cryptoParams->GetScalingTechnique() == FLEXIBLEAUTOEXT) ? 1 : 0;
             cc->EvalCompareSwitchPrecompute(pLWE, init_level, scaleSign);
 
             auto result = cc->EvalMinSchemeSwitching(clientC, clientPublicKey, testData.numValues, testData.slots);
