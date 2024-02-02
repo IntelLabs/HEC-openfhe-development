@@ -635,7 +635,6 @@ public:
    */
     template <typename ST>
     static bool DeserializeEvalMultKey(std::istream& ser, const ST& sertype) {
-
         Serial::Deserialize(s_evalMultKeyMap, ser, sertype);
 
         // TODO (dsuponit): should we keep the code below?
@@ -1004,7 +1003,6 @@ public:
     static std::map<usint, EvalKey<Element>>& GetEvalAutomorphismKeyMap(const std::string& keyID) {
         return *(CryptoContextImpl<Element>::GetEvalAutomorphismKeyMapPtr(keyID));
     }
-
 
     /**
    * Get a map of summation keys (each is composed of several automorphism keys) for all secret keys
@@ -3461,15 +3459,13 @@ public:
    * to allow the user to specify a scale that depends on the CKKS and FHEW cryptocontexts
    *
    * @param pLWE the desired plaintext modulus for the new FHEW ciphertexts
-   * @param initLevel the level of the ciphertext that will be switched
    * @param scaleSign factor to multiply the CKKS ciphertext when switching to FHEW in case the messages are too small;
    * the resulting FHEW ciphertexts will encrypt values modulo pLWE, so scaleSign should account for this
    * @param unit whether the input messages are normalized to the unit circle
    */
-    void EvalCompareSwitchPrecompute(uint32_t pLWE = 0, uint32_t initLevel = 0, double scaleSign = 1.0,
-                                     bool unit = false) {
+    void EvalCompareSwitchPrecompute(uint32_t pLWE = 0, double scaleSign = 1.0, bool unit = false) {
         VerifyCKKSScheme(__func__);
-        GetScheme()->EvalCompareSwitchPrecompute(*this, pLWE, initLevel, scaleSign, unit);
+        GetScheme()->EvalCompareSwitchPrecompute(*this, pLWE, scaleSign, unit);
     }
 
     /**
@@ -3493,7 +3489,7 @@ public:
         VerifyCKKSScheme(__func__);
         ValidateCiphertext(ciphertext1);
         ValidateCiphertext(ciphertext2);
-        
+
         return GetScheme()->EvalCompareSchemeSwitching(ciphertext1, ciphertext2, numCtxts, numSlots, pLWE, scaleSign,
                                                        unit);
     }
