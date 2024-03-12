@@ -58,7 +58,7 @@ namespace lbcrypto {
 // The cryptographically secure PRNG used by OpenFHE is based on BLAKE2 hash
 // functions. A user can replace it with a different PRNG if desired by defining
 // the same methods as for the Blake2Engine class.
-typedef Blake2Engine PRNG;
+using PRNG = PrngEngine;
 
 /**
  * @brief The class providing the PRNG capability to all random distribution
@@ -98,7 +98,7 @@ public:
 
                 std::array<uint32_t, 16> seed{};
                 seed[0] = 1;
-                m_prng  = std::make_shared<PRNG>(seed);
+                m_prng  = std::make_shared<Blake2Engine>(seed);
 #else
                 // A 512-bit seed is generated for each thread (this roughly corresponds
                 // to 256 bits of security). The seed is the sum of a random sample
@@ -127,29 +127,14 @@ public:
                     initKey[2] = (std::hash<std::thread::id>{}(std::this_thread::get_id()) >> 32);
     #endif
 
-                // heap variable; we are going to use the least 32 bits of its memory
-                // location as the counter for BLAKE2 This will increase the entropy of
-                // the BLAKE2 sample
-                void* mem        = malloc(1);
-                uint32_t counter = reinterpret_cast<long long>(mem);  // NOLINT
-                free(mem);
-
-                PRNG gen(initKey, counter);
-
                 std::uniform_int_distribution<uint32_t> distribution(0);
-                std::array<uint32_t, 16> seed{};
-                for (uint32_t i = 0; i < 16; i++) {
-                    seed[i] = distribution(gen);
-                }
 
                 std::array<uint32_t, 16> rdseed{};
-                size_t attempts  = 3;
-                bool rdGenPassed = false;
-                size_t idx       = 0;
-                while (!rdGenPassed && idx < attempts) {
+                constexpr size_t attempts = 3;
+                for (size_t idx = 0; idx < attempts; ++idx) {
                     try {
                         std::random_device genR;
-                        for (uint32_t i = 0; i < 16; i++) {
+                        for (auto& rdseed_element: rdseed) {
                             // we use the fact that there is no overflow for unsigned integers
                             // (from C++ standard) i.e., arithmetic mod 2^32 is performed. For
                             // the seed to be random, it is sufficient for one of the two
@@ -157,29 +142,39 @@ public:
                             // distribution(genR) is random. We add distribution(gen) just in
                             // case there is an implementation issue with random_device (as in
                             // older MinGW systems).
-                            rdseed[i] = distribution(genR);
+                            rdseed_element = distribution(genR);
                         }
-                        rdGenPassed = true;
+                        break;
                     }
                     catch (std::exception& e) {
                     }
-                    idx++;
                 }
 
-                for (uint32_t i = 0; i < 16; i++) {
-                    seed[i] += rdseed[i];
+                // heap variable; we are going to use the least 32 bits of its memory
+                // location as the counter for BLAKE2 This will increase the entropy of
+                // the BLAKE2 sample
+                void* mem        = malloc(1);
+                uint32_t counter = reinterpret_cast<long long>(mem);  // NOLINT
+                free(mem);
+
+                auto gen = m_factory->make(initKey, counter);
+                for (auto& rdseed_element: rdseed) {
+                    rdseed_element += distribution(*gen);
                 }
 
-                m_prng = std::make_shared<PRNG>(seed);
+                m_prng = m_factory->make(rdseed);
 #endif
             }
         }
         return *m_prng;
     }
 
+    static void SetEngine(const std::shared_ptr<PrngFactory>& factory) { m_factory = factory; }
+
 private:
     // shared pointer to a thread-specific PRNG engine
     static std::shared_ptr<PRNG> m_prng;
+    inline static std::shared_ptr<PrngFactory> m_factory = std::make_shared<Blake2Factory>();
 
 #if !defined(FIXED_SEED)
         // avoid contention on m_prng
