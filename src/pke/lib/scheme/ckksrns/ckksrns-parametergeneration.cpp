@@ -59,6 +59,11 @@ bool ParameterGenerationCKKSRNS::ParamsGenCKKSRNS(std::shared_ptr<CryptoParamete
     MultiplicationTechnique multTech = cryptoParamsCKKSRNS->GetMultiplicationTechnique();
     ProxyReEncryptionMode PREMode    = cryptoParamsCKKSRNS->GetPREMode();
 
+    // Determine appropriate composite degree automatically if scaling technique set to COMPOSITESCALINGAUTO
+    cryptoParamsCKKSRNS->ConfigureCompositeDegree(scalingModSize);
+    usint compositeDegree = cryptoParamsCKKSRNS->GetCompositeDegree();
+    compositeDegree *= (usint)1;  // @fdiasmor: Avoid unused variable compilation error.
+
     if ((PREMode != INDCPA) && (PREMode != NOT_SET)) {
         std::stringstream s;
         s << "This PRE mode " << PREMode << " is not supported for CKKSRNS";

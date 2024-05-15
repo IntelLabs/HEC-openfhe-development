@@ -116,6 +116,8 @@ protected:
         m_encTechnique                        = encTech;
         m_multTechnique                       = multTech;
         m_MPIntBootCiphertextCompressionLevel = mPIntBootCiphertextCompressionLevel;
+        m_compositeDegree                     = BASE_NUM_LEVELS_TO_DROP;  // assume single scaling as default value
+        m_registerWordSize                    = NATIVEINT;
     }
 
     CryptoParametersRNS(std::shared_ptr<ParmType> params, EncodingParams encodingParams, float distributionParameter,
@@ -138,6 +140,33 @@ protected:
         m_encTechnique                        = encTech;
         m_multTechnique                       = multTech;
         m_MPIntBootCiphertextCompressionLevel = mPIntBootCiphertextCompressionLevel;
+        m_compositeDegree                     = BASE_NUM_LEVELS_TO_DROP;  // assume single scaling as default value
+        m_registerWordSize                    = NATIVEINT;
+    }
+
+    CryptoParametersRNS(std::shared_ptr<ParmType> params, EncodingParams encodingParams, float distributionParameter,
+                        float assuranceMeasure, SecurityLevel securityLevel, usint digitSize,
+                        SecretKeyDist secretKeyDist, int maxRelinSkDeg = 2, KeySwitchTechnique ksTech = BV,
+                        ScalingTechnique scalTech = FIXEDMANUAL, usint compositeDegree = BASE_NUM_LEVELS_TO_DROP,
+                        usint registerWordSize = NATIVEINT, EncryptionTechnique encTech = STANDARD,
+                        MultiplicationTechnique multTech = HPS, ProxyReEncryptionMode PREMode = INDCPA,
+                        MultipartyMode multipartyMode           = FIXED_NOISE_MULTIPARTY,
+                        ExecutionMode executionMode             = EXEC_EVALUATION,
+                        DecryptionNoiseMode decryptionNoiseMode = FIXED_NOISE_DECRYPT, PlaintextModulus noiseScale = 1,
+                        uint32_t statisticalSecurity = 30, uint32_t numAdversarialQueries = 1,
+                        uint32_t thresholdNumOfParties                        = 1,
+                        COMPRESSION_LEVEL mPIntBootCiphertextCompressionLevel = COMPRESSION_LEVEL::SLACK)
+        : CryptoParametersRLWE<DCRTPoly>(std::move(params), std::move(encodingParams), distributionParameter,
+                                         assuranceMeasure, securityLevel, digitSize, maxRelinSkDeg, secretKeyDist,
+                                         PREMode, multipartyMode, executionMode, decryptionNoiseMode, noiseScale,
+                                         statisticalSecurity, numAdversarialQueries, thresholdNumOfParties) {
+        m_ksTechnique                         = ksTech;
+        m_scalTechnique                       = scalTech;
+        m_encTechnique                        = encTech;
+        m_multTechnique                       = multTech;
+        m_MPIntBootCiphertextCompressionLevel = mPIntBootCiphertextCompressionLevel;
+        m_compositeDegree                     = compositeDegree;  // assume single scaling as default value
+        m_registerWordSize                    = registerWordSize;
     }
 
     virtual ~CryptoParametersRNS() {}
@@ -172,6 +201,7 @@ public:
                m_ksTechnique == el->GetKeySwitchTechnique() && m_multTechnique == el->GetMultiplicationTechnique() &&
                m_encTechnique == el->GetEncryptionTechnique() && m_numPartQ == el->GetNumPartQ() &&
                m_auxBits == el->GetAuxBits() && m_extraBits == el->GetExtraBits() && m_PREMode == el->GetPREMode() &&
+               m_compositeDegree == el->GetCompositeDegree() && m_registerWordSize == el->GetRegisterWordSize() &&
                m_multipartyMode == el->GetMultipartyMode() && m_executionMode == el->GetExecutionMode();
     }
 
@@ -619,6 +649,21 @@ public:
         }
 
         return m_approxSF;
+    }
+
+    /**
+     * Gets composite scaling degree. Its values is determined at runtime based on
+     * input scaling factor and native integer type (32 bits, 64 bits, or 128 bits).
+     * This parameter is only relevant when using the CKKS scheme.
+     *
+     * @return the composite degree value for COMPOSITESCALING scaling technique
+     **/
+    usint const& GetCompositeDegree() const {
+        // If not CKKS scheme, same value as BASE_NUM_LEVELS_TO_DROP
+        return m_compositeDegree;
+    }
+    usint const& GetRegisterWordSize() const {
+        return m_registerWordSize;
     }
 
     /////////////////////////////////////
@@ -1456,6 +1501,10 @@ protected:
     // Stores 2^ptm where ptm - plaintext modulus
     double m_approxSF = 0;
 
+    // Stores composite degree for composite modulus chain
+    usint m_compositeDegree  = BASE_NUM_LEVELS_TO_DROP;
+    usint m_registerWordSize = NATIVEINT;
+
     /////////////////////////////////////
     // BFVrns : Encrypt
     /////////////////////////////////////
@@ -1765,6 +1814,8 @@ public:
         ar(cereal::make_nvp("ab", m_auxBits));
         ar(cereal::make_nvp("eb", m_extraBits));
         ar(cereal::make_nvp("ccl", m_MPIntBootCiphertextCompressionLevel));
+        ar(cereal::make_nvp("cd", m_compositeDegree));
+        ar(cereal::make_nvp("rwsz", m_registerWordSize));
     }
 
     template <class Archive>
@@ -1790,6 +1841,8 @@ public:
         catch (cereal::Exception&) {
             m_MPIntBootCiphertextCompressionLevel = COMPRESSION_LEVEL::SLACK;
         }
+        ar(cereal::make_nvp("cd", m_compositeDegree));
+        ar(cereal::make_nvp("rwsz", m_registerWordSize));
     }
 
     std::string SerializedObjectName() const override {

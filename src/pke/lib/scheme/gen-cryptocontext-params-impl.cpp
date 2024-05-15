@@ -54,8 +54,10 @@ namespace lbcrypto {
         SET_TO_SCHEME_DEFAULT(SCHEME, maxRelinSkDeg);                   \
         SET_TO_SCHEME_DEFAULT(SCHEME, ksTech);                          \
         SET_TO_SCHEME_DEFAULT(SCHEME, scalTech);                        \
-        SET_TO_SCHEME_DEFAULT(SCHEME, batchSize);                       \
+        SET_TO_SCHEME_DEFAULT(SCHEME, compositeDegree);                 \
+        SET_TO_SCHEME_DEFAULT(SCHEME, registerWordSize);                \
         SET_TO_SCHEME_DEFAULT(SCHEME, firstModSize);                    \
+        SET_TO_SCHEME_DEFAULT(SCHEME, batchSize);                       \
         SET_TO_SCHEME_DEFAULT(SCHEME, numLargeDigits);                  \
         SET_TO_SCHEME_DEFAULT(SCHEME, multiplicativeDepth);             \
         SET_TO_SCHEME_DEFAULT(SCHEME, scalingModSize);                  \
@@ -120,6 +122,10 @@ Params::Params(const std::vector<std::string>& vals) {
     if (!(++it)->empty())
         scalTech = convertToScalingTechnique(*it);
     if (!(++it)->empty())
+        compositeDegree = static_cast<usint>(std::stoul(*it));
+    if (!(++it)->empty())
+        registerWordSize = static_cast<usint>(std::stoul(*it));
+    if (!(++it)->empty())
         firstModSize = static_cast<usint>(std::stoul(*it));
     if (!(++it)->empty())
         batchSize = static_cast<usint>(std::stoul(*it));
@@ -175,8 +181,10 @@ std::ostream& operator<<(std::ostream& os, const Params& obj) {
         << "; maxRelinSkDeg: " << obj.maxRelinSkDeg
         << "; ksTech: " << obj.ksTech
         << "; scalTech: " << obj.scalTech
-        << "; batchSize: " << obj.batchSize
+        << "; compositeDegree: " << obj.compositeDegree
+        << "; registerWordSize: " << obj.registerWordSize
         << "; firstModSize: " << obj.firstModSize
+        << "; batchSize: " << obj.batchSize
         << "; numLargeDigits: " << obj.numLargeDigits
         << "; multiplicativeDepth:" << obj.multiplicativeDepth
         << "; scalingModSize: " << obj.scalingModSize

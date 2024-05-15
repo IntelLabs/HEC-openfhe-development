@@ -154,4 +154,30 @@ uint64_t CryptoParametersCKKSRNS::FindAuxPrimeStep() const {
     return static_cast<uint64_t>(2 * n);
 }
 
+void CryptoParametersCKKSRNS::ConfigureCompositeDegree(usint scalingModSize) {
+    // Add logic to determine whether composite scaling is feasible or not
+    if (GetScalingTechnique() == COMPOSITESCALINGAUTO) {
+        if (NATIVEINT != 64)
+            OPENFHE_THROW(config_error, "COMPOSITESCALINGAUTO scaling technique only supported with NATIVEINT==64.");
+        usint compositeDegree  = GetCompositeDegree();
+        usint registerWordSize = GetRegisterWordSize();
+        if (registerWordSize <= 64) {
+            if (registerWordSize < scalingModSize) {
+                compositeDegree = (usint)std::ceil(static_cast<float>(scalingModSize) / registerWordSize);
+                // Assert minimum allowed bitwidth
+                // @fdiasmor: make it more robust to a range of multiplicative depth
+                if (static_cast<float>(scalingModSize) / compositeDegree < 16) {
+                    OPENFHE_THROW(
+                        config_error,
+                        "Moduli bitwidth too short (< 16) for target multiplicative depth. Consider increase the scaling factor or the register word size.");
+                }
+                m_compositeDegree = compositeDegree;
+            }  // else composite degree remains set to 1
+        }
+        else {
+            OPENFHE_THROW(config_error, "COMPOSITESCALING scaling technique only supports register word size <= 64.");
+        }
+    }
+}
+
 }  // namespace lbcrypto
