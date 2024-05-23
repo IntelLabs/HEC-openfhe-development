@@ -44,6 +44,11 @@
 namespace lbcrypto {
 
 class ParameterGenerationCKKSRNS : public ParameterGenerationRNS {
+    void CompositePrimeModuliGen(std::vector<NativeInteger> &moduliQ, std::vector<NativeInteger> &rootsQ, 
+                                usint compositeDegree, usint numPrimes, usint firstModSize, usint dcrtBits, usint cyclOrder) const;
+    void SinglePrimeModuliGen(std::vector<NativeInteger> &moduliQ, std::vector<NativeInteger> &rootsQ, 
+                            ScalingTechnique scalTech, usint numPrimes, usint firstModSize, usint dcrtBits, 
+                            usint cyclOrder) const;
 public:
     virtual ~ParameterGenerationCKKSRNS() {}
 
