@@ -612,7 +612,8 @@ public:
    * @return the scaling factor.
    */
     double GetScalingFactorReal(uint32_t l = 0) const {
-        if (m_scalTechnique == FLEXIBLEAUTO || m_scalTechnique == FLEXIBLEAUTOEXT) {
+        if (m_scalTechnique == FLEXIBLEAUTO || m_scalTechnique == FLEXIBLEAUTOEXT ||
+            m_scalTechnique == COMPOSITESCALINGAUTO || m_scalTechnique == COMPOSITESCALINGMANUAL) {
             if (l >= m_scalingFactorsReal.size()) {
                 // TODO: Return an error here.
                 return m_approxSF;
@@ -621,32 +622,16 @@ public:
             return m_scalingFactorsReal[l];
         }
 
-        if (m_scalTechnique == COMPOSITESCALINGAUTO || m_scalTechnique == COMPOSITESCALINGMANUAL) {
-            // if (l >= m_scalingFactorsReal.size()) {
-            //     // TODO: Return an error here.
-            //     return m_approxSF;
-            // }
-            return m_scalingFactorsReal[l];
-        }
-
         return m_approxSF;
     }
 
     double GetScalingFactorRealBig(uint32_t l = 0) const {
-        if (m_scalTechnique == FLEXIBLEAUTO || m_scalTechnique == FLEXIBLEAUTOEXT) {
+        if (m_scalTechnique == FLEXIBLEAUTO || m_scalTechnique == FLEXIBLEAUTOEXT ||
+            m_scalTechnique == COMPOSITESCALINGAUTO || m_scalTechnique == COMPOSITESCALINGMANUAL) {
             if (l >= m_scalingFactorsRealBig.size()) {
                 // TODO: Return an error here.
                 return m_approxSF;
             }
-
-            return m_scalingFactorsRealBig[l];
-        }
-
-        if (m_scalTechnique == COMPOSITESCALINGAUTO || m_scalTechnique == COMPOSITESCALINGMANUAL) {
-            // if (l >= m_scalingFactorsRealBig.size()) {
-            //     // TODO: Return an error here.
-            //     return m_approxSF;
-            // }
 
             return m_scalingFactorsRealBig[l];
         }

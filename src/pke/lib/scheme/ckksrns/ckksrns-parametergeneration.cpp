@@ -368,7 +368,7 @@ bool ParameterGenerationCKKSRNS::ParamsGenCKKSRNS(std::shared_ptr<CryptoParamete
     cryptoParamsCKKSRNS->ConfigureCompositeDegree(firstModSize);
     usint compositeDegree = cryptoParamsCKKSRNS->GetCompositeDegree();
     // compositeDegree *= (usint)1;  // @fdiasmor: Avoid unused variable compilation error.
-    if (compositeDegree > 2) {
+    if (compositeDegree > 2 && firstModSize > 64) {
         OPENFHE_THROW(config_error, "This COMPOSITESCALING* version does not support composite degree > 2.");
     }
     // Bookeeping unique prime moduli
