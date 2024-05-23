@@ -60,7 +60,7 @@ int main() {
    * For performance reasons, it's generally preferable to perform operations
    * in the shorted multiplicative depth possible.
    */
-    uint32_t multDepth = 3;
+    uint32_t multDepth = 2;
 
     /* A2) Bit-length of scaling factor.
    * CKKS works for real numbers, but these numbers are encoded as integers.
@@ -83,7 +83,7 @@ int main() {
    * scaling factor should be large enough to both accommodate this noise and
    * support results that match the desired accuracy.
    */
-    uint32_t firstModSize = 56;
+    uint32_t firstModSize = 60;
     uint32_t scaleModSize = 52;
 
     /* A3) Number of plaintext slots used in the ciphertext.
@@ -100,7 +100,7 @@ int main() {
    */
     uint32_t batchSize = 8;
 
-    /* 
+    /*
     * The word size in bits of the target hardware architecture.
     */
     uint32_t registerWordSize = 32;
@@ -131,9 +131,9 @@ int main() {
 
     CryptoContext<DCRTPoly> cc     = GenCryptoContext(parameters);
     const auto cryptoParamsCKKSRNS = std::dynamic_pointer_cast<CryptoParametersCKKSRNS>(cc->GetCryptoParameters());
-    std::cout << "compositeDegree = " << cryptoParamsCKKSRNS->GetCompositeDegree()
-              << " modBitWidth = " << static_cast<float>(scaleModSize) / cryptoParamsCKKSRNS->GetCompositeDegree()
-              << std::endl;
+    std::cout << "compositeDegree=" << cryptoParamsCKKSRNS->GetCompositeDegree()
+              << " modBitWidth=" << static_cast<float>(scaleModSize) / cryptoParamsCKKSRNS->GetCompositeDegree()
+              << " targetHWArchWordSize=" << registerWordSize << std::endl;
 
     // Enable the features that you wish to use
     cc->Enable(PKE);

@@ -125,6 +125,8 @@ void LeveledSHECKKSRNS::ModReduceInternalInPlace(Ciphertext<DCRTPoly>& ciphertex
 
     for (usint i = 0; i < levels; ++i) {
         double modReduceFactor = cryptoParams->GetModReduceFactor(sizeQl - 1 - i);
+        std::cout << "index=" << sizeQl - 1 - i << " level #" << i << ": modReduceFactor=" << modReduceFactor
+                  << " scalingFactor=" << ciphertext->GetScalingFactor() << std::endl;
         ciphertext->SetScalingFactor(ciphertext->GetScalingFactor() / modReduceFactor);
     }
 }

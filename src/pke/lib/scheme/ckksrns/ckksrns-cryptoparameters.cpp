@@ -47,7 +47,8 @@ void CryptoParametersCKKSRNS::PrecomputeCRTTables(KeySwitchTechnique ksTech, Sca
                                                   uint32_t numPartQ, uint32_t auxBits, uint32_t extraBits) {
     CryptoParametersRNS::PrecomputeCRTTables(ksTech, scalTech, encTech, multTech, numPartQ, auxBits, extraBits);
 
-    size_t sizeQ = GetElementParams()->GetParams().size();
+    size_t sizeQ          = GetElementParams()->GetParams().size();
+    usint compositeDegree = this->GetCompositeDegree();
 
     std::vector<NativeInteger> moduliQ(sizeQ);
     std::vector<NativeInteger> rootsQ(sizeQ);
@@ -82,37 +83,93 @@ void CryptoParametersCKKSRNS::PrecomputeCRTTables(KeySwitchTechnique ksTech, Sca
     }
 
     // Pre-compute scaling factors for each level (used in EXACT scaling technique)
-    if (m_scalTechnique == FLEXIBLEAUTO || m_scalTechnique == FLEXIBLEAUTOEXT) {
+    if (m_scalTechnique == FLEXIBLEAUTO || m_scalTechnique == FLEXIBLEAUTOEXT ||
+        m_scalTechnique == COMPOSITESCALINGAUTO || m_scalTechnique == COMPOSITESCALINGMANUAL) {
         m_scalingFactorsReal.resize(sizeQ);
         m_scalingFactorsReal[0] = moduliQ[sizeQ - 1].ConvertToDouble();
+        if (m_scalTechnique == COMPOSITESCALINGAUTO || m_scalTechnique == COMPOSITESCALINGMANUAL) {
+            for (uint32_t j = 1; j < compositeDegree; j++) {
+                m_scalingFactorsReal[0] *= moduliQ[sizeQ - j - 1].ConvertToDouble();
+            }
+        }
+        std::cout << "scalingFactorsReal[0]=" << m_scalingFactorsReal[0] << std::endl;
 
         if (extraBits == 0) {
             for (uint32_t k = 1; k < sizeQ; k++) {
-                double prevSF           = m_scalingFactorsReal[k - 1];
-                m_scalingFactorsReal[k] = prevSF * prevSF / moduliQ[sizeQ - k].ConvertToDouble();
-                double ratio            = m_scalingFactorsReal[k] / m_scalingFactorsReal[0];
-
-                if (ratio <= 0.5 || ratio >= 2.0)
-                    OPENFHE_THROW(
-                        "CryptoParametersCKKSRNS::PrecomputeCRTTables "
-                        "- FLEXIBLEAUTO cannot support this "
-                        "number of levels in this parameter setting. Please use "
-                        "FIXEDMANUAL.");
+                if (m_scalTechnique == COMPOSITESCALINGAUTO || m_scalTechnique == COMPOSITESCALINGMANUAL) {
+                    if (k % compositeDegree == 0) {
+                        double prevSF           = m_scalingFactorsReal[k - compositeDegree];
+                        m_scalingFactorsReal[k] = prevSF * prevSF;
+                        for (uint32_t j = 0; j < compositeDegree; j++) {
+                            m_scalingFactorsReal[k] /= moduliQ[sizeQ - k + j].ConvertToDouble();
+                        }
+                    }
+                    else {
+                        m_scalingFactorsReal[k] = 1;
+                    }
+                }
+                else {  // Single Scaling
+                    double prevSF           = m_scalingFactorsReal[k - 1];
+                    m_scalingFactorsReal[k] = prevSF * prevSF / moduliQ[sizeQ - k].ConvertToDouble();
+                }
+                std::cout << "scalingFactorsReal[k=" << k << "]=" << m_scalingFactorsReal[k] << std::endl;
+                if (m_scalTechnique == FLEXIBLEAUTO || m_scalTechnique == FLEXIBLEAUTOEXT) {
+                    double ratio = m_scalingFactorsReal[k] / m_scalingFactorsReal[0];
+                    if (ratio <= 0.5 || ratio >= 2.0)
+                        OPENFHE_THROW(
+                            "CryptoParametersCKKSRNS::PrecomputeCRTTables "
+                            "- FLEXIBLEAUTO cannot support this "
+                            "number of levels in this parameter setting. Please use "
+                            "FIXEDMANUAL.");
+                }
             }
         }
         else {
-            m_scalingFactorsReal[1] = moduliQ[sizeQ - 2].ConvertToDouble();
-            for (uint32_t k = 2; k < sizeQ; k++) {
-                double prevSF           = m_scalingFactorsReal[k - 1];
-                m_scalingFactorsReal[k] = prevSF * prevSF / moduliQ[sizeQ - k].ConvertToDouble();
-                double ratio            = m_scalingFactorsReal[k] / m_scalingFactorsReal[1];
+            if (m_scalTechnique == COMPOSITESCALINGAUTO || m_scalTechnique == COMPOSITESCALINGMANUAL) {
+                m_scalingFactorsReal[compositeDegree] = moduliQ[sizeQ - compositeDegree - 1].ConvertToDouble();
+                for (uint32_t i = 1; i < compositeDegree; i++) {
+                    m_scalingFactorsReal[i] = 1;
+                    m_scalingFactorsReal[compositeDegree] *= moduliQ[sizeQ - compositeDegree - i - 1].ConvertToDouble();
+                }
+                std::cout << "scalingFactorsReal[k=" << compositeDegree << "]=" << m_scalingFactorsReal[compositeDegree]
+                          << std::endl;
 
-                if (ratio <= 0.5 || ratio >= 2.0)
-                    OPENFHE_THROW(
-                        "CryptoParametersCKKSRNS::PrecomputeCRTTables "
-                        "- FLEXIBLEAUTO cannot support this "
-                        "number of levels in this parameter setting. Please use "
-                        "FIXEDMANUAL.");
+                for (uint32_t k = (compositeDegree + 1); k < sizeQ; k++) {
+                    if (k % compositeDegree == 0) {
+                        double prevSF           = m_scalingFactorsReal[k - compositeDegree];
+                        m_scalingFactorsReal[k] = prevSF * prevSF;
+                        for (uint32_t j = 0; j < compositeDegree; j++) {
+                            m_scalingFactorsReal[k] /= moduliQ[sizeQ - k + j].ConvertToDouble();
+                        }
+                        // double ratio            = m_scalingFactorsReal[k] / m_scalingFactorsReal[1];
+                        // if (ratio <= 0.5 || ratio >= 2.0)
+                        //     OPENFHE_THROW(
+                        //         "CryptoParametersCKKSRNS::PrecomputeCRTTables "
+                        //         "- FLEXIBLEAUTO cannot support this "
+                        //         "number of levels in this parameter setting. Please use "
+                        //         "FIXEDMANUAL.");
+                    }
+                    else {
+                        m_scalingFactorsReal[k] = 1;
+                    }
+                    std::cout << "scalingFactorsReal[k=" << k << "]=" << m_scalingFactorsReal[k] << std::endl;
+                }
+            }
+            else {
+                m_scalingFactorsReal[1] = moduliQ[sizeQ - 2].ConvertToDouble();
+
+                for (uint32_t k = 2; k < sizeQ; k++) {
+                    double prevSF           = m_scalingFactorsReal[k - 1];
+                    m_scalingFactorsReal[k] = prevSF * prevSF / moduliQ[sizeQ - k].ConvertToDouble();
+                    double ratio            = m_scalingFactorsReal[k] / m_scalingFactorsReal[1];
+
+                    if (ratio <= 0.5 || ratio >= 2.0)
+                        OPENFHE_THROW(
+                            "CryptoParametersCKKSRNS::PrecomputeCRTTables "
+                            "- FLEXIBLEAUTO cannot support this "
+                            "number of levels in this parameter setting. Please use "
+                            "FIXEDMANUAL.");
+                }
             }
         }
 
