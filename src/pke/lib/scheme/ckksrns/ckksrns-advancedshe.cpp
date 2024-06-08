@@ -63,6 +63,8 @@ Ciphertext<DCRTPoly> AdvancedSHECKKSRNS::EvalLinearWSumMutable(std::vector<Ciphe
                                                                const std::vector<double>& constants) const {
     const auto cryptoParams = std::dynamic_pointer_cast<CryptoParametersCKKSRNS>(ciphertexts[0]->GetCryptoParameters());
 
+    usint compositeDegree = cryptoParams->GetCompositeDegree();
+
     auto cc   = ciphertexts[0]->GetCryptoContext();
     auto algo = cc->GetScheme();
 
@@ -89,7 +91,7 @@ Ciphertext<DCRTPoly> AdvancedSHECKKSRNS::EvalLinearWSumMutable(std::vector<Ciphe
 
         if (ciphertexts[maxIdx]->GetNoiseScaleDeg() == 2) {
             for (uint32_t i = 0; i < ciphertexts.size(); i++) {
-                algo->ModReduceInternalInPlace(ciphertexts[i], BASE_NUM_LEVELS_TO_DROP);
+                algo->ModReduceInternalInPlace(ciphertexts[i], compositeDegree);
             }
         }
     }
@@ -640,6 +642,7 @@ Ciphertext<DCRTPoly> AdvancedSHECKKSRNS::EvalChebyshevSeriesLinear(ConstCipherte
                                                                    double b) const {
     usint k = coefficients.size() - 1;
 
+    std::cout << __FUNCTION__ << "::" << __LINE__ << std::endl;
     // computes linear transformation y = -1 + 2 (x-a)/(b-a)
     // consumes one level when a <> -1 && b <> 1
     auto cc = x->GetCryptoContext();
@@ -663,6 +666,7 @@ Ciphertext<DCRTPoly> AdvancedSHECKKSRNS::EvalChebyshevSeriesLinear(ConstCipherte
     // for y: T_1(y) = y, T_2(y), ... , T_k(y)
     // uses binary tree multiplication
     for (size_t i = 2; i <= k; i++) {
+        std::cout << __FUNCTION__ << "::" << __LINE__ << " bintree loop " << i << std::endl;
         // if i is a power of two
         if (!(i & (i - 1))) {
             // compute T_{2i}(y) = 2*T_i(y)^2 - 1
@@ -708,12 +712,14 @@ Ciphertext<DCRTPoly> AdvancedSHECKKSRNS::EvalChebyshevSeriesLinear(ConstCipherte
         usint levelDiff = T[k - 1]->GetLevel() - T[i - 1]->GetLevel();
         cc->LevelReduceInPlace(T[i - 1], nullptr, levelDiff);
     }
-
+    std::cout << __FUNCTION__ << "::" << __LINE__ << " perform scalar multiplication " << std::endl;
     // perform scalar multiplication for the highest-order term
     auto result = cc->EvalMult(T[k - 1], coefficients[k]);
 
     // perform scalar multiplication for all other terms and sum them up
     for (size_t i = 0; i < k - 1; i++) {
+        std::cout << __FUNCTION__ << "::" << __LINE__ << " perform scalar multiplication for all terms " << i
+                  << std::endl;
         if (coefficients[i + 1] != 0) {
             cc->EvalMultInPlace(T[i], coefficients[i + 1]);
             cc->EvalAddInPlace(result, T[i]);
@@ -897,7 +903,7 @@ Ciphertext<DCRTPoly> AdvancedSHECKKSRNS::EvalChebyshevSeriesPS(ConstCiphertext<D
     uint32_t n = Degree(coefficients);
 
     std::vector<double> f2 = coefficients;
-
+    std::cout << __FUNCTION__ << "::" << __LINE__ << std::endl;
     // Make sure the coefficients do not have the zero dominant terms
     if (coefficients[coefficients.size() - 1] == 0)
         f2.resize(n + 1);
@@ -907,7 +913,8 @@ Ciphertext<DCRTPoly> AdvancedSHECKKSRNS::EvalChebyshevSeriesPS(ConstCiphertext<D
     uint32_t m                 = degs[1];
 
     //  std::cerr << "\n Degree: n = " << n << ", k = " << k << ", m = " << m << endl;
-
+    std::cout << __FUNCTION__ << "::" << __LINE__ << " GetContext degs=" << degs << " k=" << k << " m=" << m
+              << std::endl;
     // computes linear transformation y = -1 + 2 (x-a)/(b-a)
     // consumes one level when a <> -1 && b <> 1
     auto cc = x->GetCryptoContext();
@@ -916,12 +923,13 @@ Ciphertext<DCRTPoly> AdvancedSHECKKSRNS::EvalChebyshevSeriesPS(ConstCiphertext<D
         // no linear transformation is needed if a = -1, b = 1
         // T_1(y) = y
         T[0] = x->Clone();
+        std::cout << __FUNCTION__ << "::" << __LINE__ << " T[0] Cloned level" << T[0]->GetLevel() << std::endl;
     }
     else {
         // linear transformation is needed
         double alpha = 2 / (b - a);
         double beta  = 2 * a / (b - a);
-
+        std::cout << __FUNCTION__ << "::" << __LINE__ << " T[0] level" << T[0]->GetLevel() << std::endl;
         T[0] = cc->EvalMult(x, alpha);
         cc->ModReduceInPlace(T[0]);
         cc->EvalAddInPlace(T[0], -1.0 - beta);
@@ -936,29 +944,46 @@ Ciphertext<DCRTPoly> AdvancedSHECKKSRNS::EvalChebyshevSeriesPS(ConstCiphertext<D
         // if i is a power of two
         if (!(i & (i - 1))) {
             // compute T_{2i}(y) = 2*T_i(y)^2 - 1
+            std::cout << __FUNCTION__ << "::" << __LINE__ << " is power of 2 T[i-1] square=" << T[i / 2 - 1]->GetLevel()
+                      << std::endl;
             auto square = cc->EvalSquare(T[i / 2 - 1]);
-            T[i - 1]    = cc->EvalAdd(square, square);
+            std::cout << __FUNCTION__ << "::" << __LINE__ << " after square" << std::endl;
+            T[i - 1] = cc->EvalAdd(square, square);
+            std::cout << __FUNCTION__ << "::" << __LINE__ << " after add" << std::endl;
             cc->ModReduceInPlace(T[i - 1]);
+            std::cout << __FUNCTION__ << "::" << __LINE__ << " after mod" << std::endl;
             cc->EvalAddInPlace(T[i - 1], -1.0);
+            std::cout << __FUNCTION__ << "::" << __LINE__ << " after add" << std::endl;
         }
         else {
             // non-power of 2
             if (i % 2 == 1) {
                 // if i is odd
                 // compute T_{2i+1}(y) = 2*T_i(y)*T_{i+1}(y) - y
+                std::cout << __FUNCTION__ << "::" << __LINE__ << " T[i/2] level=" << T[i / 2]->GetLevel() << std::endl;
                 auto prod = cc->EvalMult(T[i / 2 - 1], T[i / 2]);
-                T[i - 1]  = cc->EvalAdd(prod, prod);
+                std::cout << __FUNCTION__ << "::" << __LINE__ << " after mult" << std::endl;
+                T[i - 1] = cc->EvalAdd(prod, prod);
+                std::cout << __FUNCTION__ << "::" << __LINE__ << " after add" << std::endl;
 
                 cc->ModReduceInPlace(T[i - 1]);
+                std::cout << __FUNCTION__ << "::" << __LINE__ << " after mod red" << std::endl;
                 cc->EvalSubInPlace(T[i - 1], y);
+                std::cout << __FUNCTION__ << "::" << __LINE__ << " after sub" << std::endl;
             }
             else {
                 // i is even but not power of 2
                 // compute T_{2i}(y) = 2*T_i(y)^2 - 1
+                std::cout << __FUNCTION__ << "::" << __LINE__ << " T[i/2-1] square=" << T[i / 2 - 1]->GetLevel()
+                          << std::endl;
                 auto square = cc->EvalSquare(T[i / 2 - 1]);
-                T[i - 1]    = cc->EvalAdd(square, square);
+                std::cout << __FUNCTION__ << "::" << __LINE__ << " after square" << std::endl;
+                T[i - 1] = cc->EvalAdd(square, square);
+                std::cout << __FUNCTION__ << "::" << __LINE__ << " after add" << std::endl;
                 cc->ModReduceInPlace(T[i - 1]);
+                std::cout << __FUNCTION__ << "::" << __LINE__ << " after mod" << std::endl;
                 cc->EvalAddInPlace(T[i - 1], -1.0);
+                std::cout << __FUNCTION__ << "::" << __LINE__ << " after add" << std::endl;
             }
         }
     }
@@ -976,7 +1001,11 @@ Ciphertext<DCRTPoly> AdvancedSHECKKSRNS::EvalChebyshevSeriesPS(ConstCiphertext<D
     }
     else {
         for (size_t i = 1; i < k; i++) {
+            std::cout << __FUNCTION__ << "::" << __LINE__ << " Before T[i-1], T[k-1]" << T[i - 1]->GetLevel() << ", "
+                      << T[k - 1]->GetLevel() << std::endl;
             algo->AdjustLevelsAndDepthInPlace(T[i - 1], T[k - 1]);
+            std::cout << __FUNCTION__ << "::" << __LINE__ << " After T[i-1], T[k-1]" << T[i - 1]->GetLevel() << ", "
+                      << T[k - 1]->GetLevel() << std::endl;
         }
     }
 
@@ -986,17 +1015,24 @@ Ciphertext<DCRTPoly> AdvancedSHECKKSRNS::EvalChebyshevSeriesPS(ConstCiphertext<D
     for (uint32_t i = 1; i < m; i++) {
         auto square = cc->EvalSquare(T2[i - 1]);
         T2[i]       = cc->EvalAdd(square, square);
+        std::cout << __FUNCTION__ << "::" << __LINE__ << " before mod T2[i] square " << T2[i]->GetLevel() << std::endl;
         cc->ModReduceInPlace(T2[i]);
+        std::cout << __FUNCTION__ << "::" << __LINE__ << " after mod T2[i] square " << T2[i]->GetLevel() << std::endl;
         cc->EvalAddInPlace(T2[i], -1.0);
     }
 
+    std::cout << __FUNCTION__ << "::" << __LINE__ << " T2[0] square" << T2[0]->GetLevel() << std::endl;
     // computes T_{k(2*m - 1)}(y)
     auto T2km1 = T2.front();
     for (uint32_t i = 1; i < m; i++) {
         // compute T_{k(2*m - 1)} = 2*T_{k(2^{m-1}-1)}(y)*T_{k*2^{m-1}}(y) - T_k(y)
+        std::cout << __FUNCTION__ << "::" << __LINE__ << " T2[i] level" << T2[i]->GetLevel() << " T2km1 level"
+                  << T2km1->GetLevel() << std::endl;
         auto prod = cc->EvalMult(T2km1, T2[i]);
         T2km1     = cc->EvalAdd(prod, prod);
+        std::cout << __FUNCTION__ << "::" << __LINE__ << " before modred T2km1 level" << T2km1->GetLevel() << std::endl;
         cc->ModReduceInPlace(T2km1);
+        std::cout << __FUNCTION__ << "::" << __LINE__ << " after modred T2km1 level" << T2km1->GetLevel() << std::endl;
         cc->EvalSubInPlace(T2km1, T2.front());
     }
 

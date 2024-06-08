@@ -120,9 +120,11 @@ void LeveledSHECKKSRNS::ModReduceInternalInPlace(Ciphertext<DCRTPoly>& ciphertex
         }
     }
 
+    std::cout << __FUNCTION__ << "::" << __LINE__ << " d=" << cryptoParams->GetCompositeDegree() << " levels=" << levels
+              << std::endl;
     ciphertext->SetNoiseScaleDeg(ciphertext->GetNoiseScaleDeg() - levels / cryptoParams->GetCompositeDegree());
     ciphertext->SetLevel(ciphertext->GetLevel() + levels);
-
+    std::cout << __FUNCTION__ << "::" << __LINE__ << std::endl;
     for (usint i = 0; i < levels; ++i) {
         double modReduceFactor = cryptoParams->GetModReduceFactor(sizeQl - 1 - i);
         std::cout << "index=" << sizeQl - 1 - i << " level #" << i << ": modReduceFactor=" << modReduceFactor
@@ -137,6 +139,7 @@ void LeveledSHECKKSRNS::ModReduceInternalInPlace(Ciphertext<DCRTPoly>& ciphertex
 
 void LeveledSHECKKSRNS::LevelReduceInternalInPlace(Ciphertext<DCRTPoly>& ciphertext, size_t levels) const {
     std::vector<DCRTPoly>& elements = ciphertext->GetElements();
+    std::cout << __FUNCTION__ << "::" << __LINE__ << " levels=" << levels << std::endl;
     for (auto& element : elements) {
         element.DropLastElements(levels);
     }
@@ -659,7 +662,8 @@ void LeveledSHECKKSRNS::AdjustLevelsAndDepthToOneInPlace(Ciphertext<DCRTPoly>& c
     AdjustLevelsAndDepthInPlace(ciphertext1, ciphertext2);
 
     if (ciphertext1->GetNoiseScaleDeg() == 2) {
-        const auto cryptoParams = std::dynamic_pointer_cast<CryptoParametersCKKSRNS>(ciphertext1->GetCryptoParameters());
+        const auto cryptoParams =
+            std::dynamic_pointer_cast<CryptoParametersCKKSRNS>(ciphertext1->GetCryptoParameters());
         ModReduceInternalInPlace(ciphertext1, cryptoParams->GetCompositeDegree());
         ModReduceInternalInPlace(ciphertext2, cryptoParams->GetCompositeDegree());
     }

@@ -212,7 +212,13 @@ Ciphertext<DCRTPoly> LeveledSHERNS::EvalSquare(ConstCiphertext<DCRTPoly> ciphert
     }
 
     auto c = ciphertext->Clone();
-    ModReduceInternalInPlace(c, BASE_NUM_LEVELS_TO_DROP);
+    if (cryptoParams->GetScalingTechnique() == COMPOSITESCALINGAUTO ||
+        cryptoParams->GetScalingTechnique() == COMPOSITESCALINGMANUAL) {
+        ModReduceInternalInPlace(c, cryptoParams->GetCompositeDegree());
+    }
+    else {
+        ModReduceInternalInPlace(c, BASE_NUM_LEVELS_TO_DROP);
+    }
 
     return EvalSquareCore(c);
 }
@@ -222,7 +228,13 @@ Ciphertext<DCRTPoly> LeveledSHERNS::EvalSquareMutable(Ciphertext<DCRTPoly>& ciph
 
     if (cryptoParams->GetScalingTechnique() != NORESCALE && cryptoParams->GetScalingTechnique() != FIXEDMANUAL &&
         ciphertext->GetNoiseScaleDeg() == 2) {
-        ModReduceInternalInPlace(ciphertext, BASE_NUM_LEVELS_TO_DROP);
+        if (cryptoParams->GetScalingTechnique() == COMPOSITESCALINGAUTO ||
+            cryptoParams->GetScalingTechnique() == COMPOSITESCALINGMANUAL) {
+            ModReduceInternalInPlace(ciphertext, cryptoParams->GetCompositeDegree());
+        }
+        else {
+            ModReduceInternalInPlace(ciphertext, BASE_NUM_LEVELS_TO_DROP);
+        }
     }
 
     return EvalSquareCore(ciphertext);
@@ -377,9 +389,16 @@ void LeveledSHERNS::LevelReduceInPlace(Ciphertext<DCRTPoly>& ciphertext, const E
 
 Ciphertext<DCRTPoly> LeveledSHERNS::Compress(ConstCiphertext<DCRTPoly> ciphertext, size_t towersLeft) const {
     Ciphertext<DCRTPoly> result = std::make_shared<CiphertextImpl<DCRTPoly>>(*ciphertext);
+    const auto cryptoParams     = std::dynamic_pointer_cast<CryptoParametersRNS>(ciphertext->GetCryptoParameters());
 
     while (result->GetNoiseScaleDeg() > 1) {
-        ModReduceInternalInPlace(result, BASE_NUM_LEVELS_TO_DROP);
+        if (cryptoParams->GetScalingTechnique() == COMPOSITESCALINGAUTO ||
+            cryptoParams->GetScalingTechnique() == COMPOSITESCALINGMANUAL) {
+            ModReduceInternalInPlace(result, cryptoParams->GetCompositeDegree());
+        }
+        else {
+            ModReduceInternalInPlace(result, BASE_NUM_LEVELS_TO_DROP);
+        }
     }
     const std::vector<DCRTPoly>& cv = result->GetElements();
     usint sizeQl                    = cv[0].GetNumOfElements();

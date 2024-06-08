@@ -561,10 +561,18 @@ template <class Element>
 Ciphertext<Element> LeveledSHEBase<Element>::ComposedEvalMult(ConstCiphertext<Element> ciphertext1,
                                                               ConstCiphertext<Element> ciphertext2,
                                                               const EvalKey<Element> evalKey) const {
+    const auto cc                  = ciphertext1->GetCryptoContext();
     auto algo                      = ciphertext1->GetCryptoContext()->GetScheme();
+    const auto cryptoParams        = ciphertext1->GetCryptoParameters();
     Ciphertext<Element> ciphertext = EvalMult(ciphertext1, ciphertext2);
     algo->KeySwitchInPlace(ciphertext, evalKey);
-    ModReduceInPlace(ciphertext, BASE_NUM_LEVELS_TO_DROP);
+    std::cout << "*****" << __FUNCTION__ << "::" << __LINE__ << "*****" << std::endl;
+    usint levelsToDrop = BASE_NUM_LEVELS_TO_DROP;
+    if (cc->getSchemeId() == CKKSRNS_SCHEME) {
+        const auto cryptoRNSParams = std::dynamic_pointer_cast<CryptoParametersRNS>(cryptoParams);
+        levelsToDrop               = cryptoRNSParams->GetCompositeDegree();
+    }
+    ModReduceInPlace(ciphertext, levelsToDrop);
     return ciphertext;
 }
 
@@ -576,6 +584,7 @@ template <class Element>
 Ciphertext<Element> LeveledSHEBase<Element>::LevelReduce(ConstCiphertext<Element> ciphertext,
                                                          const EvalKey<Element> evalKey, size_t levels) const {
     auto result = ciphertext->Clone();
+    std::cout << "*****" << __FUNCTION__ << "::" << __LINE__ << "***** levels=" << levels << std::endl;
     LevelReduceInPlace(result, evalKey, levels);
     return result;
 }
