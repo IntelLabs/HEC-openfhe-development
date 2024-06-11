@@ -2264,8 +2264,6 @@ public:
 
         const auto cryptoParams =
             std::dynamic_pointer_cast<CryptoParametersRNS>(ciphertext->GetCryptoContext()->GetCryptoParameters());
-        std::cout << __FUNCTION__ << "::" << __LINE__ << " rescaleinplace d=" << cryptoParams->GetCompositeDegree()
-                  << std::endl;
         GetScheme()->ModReduceInPlace(ciphertext, cryptoParams->GetCompositeDegree());
     }
 
@@ -2280,8 +2278,6 @@ public:
         if (isCKKS(m_schemeId)) {
             const auto cryptoParams =
                 std::dynamic_pointer_cast<CryptoParametersRNS>(ciphertext->GetCryptoContext()->GetCryptoParameters());
-            std::cout << __FUNCTION__ << "::" << __LINE__ << " isCKKS d=" << cryptoParams->GetCompositeDegree()
-                      << std::endl;
             return GetScheme()->ModReduce(ciphertext, cryptoParams->GetCompositeDegree());
         }
         return GetScheme()->ModReduce(ciphertext, BASE_NUM_LEVELS_TO_DROP);
@@ -2293,13 +2289,11 @@ public:
    */
     void ModReduceInPlace(Ciphertext<Element>& ciphertext) const {
         ValidateCiphertext(ciphertext);
-        std::cout << __FUNCTION__ << "::" << __LINE__ << std::endl;
+
         if (isCKKS(m_schemeId)) {
             const auto cryptoParams =
                 std::dynamic_pointer_cast<CryptoParametersRNS>(ciphertext->GetCryptoContext()->GetCryptoParameters());
             GetScheme()->ModReduceInPlace(ciphertext, cryptoParams->GetCompositeDegree());
-            std::cout << __FUNCTION__ << "::" << __LINE__ << " isCKKS d=" << cryptoParams->GetCompositeDegree()
-                      << std::endl;
         }
         else {
             GetScheme()->ModReduceInPlace(ciphertext, BASE_NUM_LEVELS_TO_DROP);
@@ -2311,18 +2305,18 @@ public:
    * @param ciphertext input ciphertext. Supported only in BGV/CKKS.
    * @param evalKey input evaluation key (modified in place)
    * @returns the ciphertext with reduced number opf RNS limbs
+   * Note: In CKKS COMPOSITESCALING mode, it is assumed the number of levels passed as argument matches
+   * the number of levels in single scaling mode since it is altered internally.
    */
     Ciphertext<Element> LevelReduce(ConstCiphertext<Element> ciphertext, const EvalKey<Element> evalKey,
                                     size_t levels = 1) const {
         ValidateCiphertext(ciphertext);
-        std::cout << __FUNCTION__ << "::" << __LINE__ << std::endl;
-        if (isCKKS(m_schemeId)) {
-            const auto cryptoParams =
-                std::dynamic_pointer_cast<CryptoParametersRNS>(ciphertext->GetCryptoContext()->GetCryptoParameters());
-            std::cout << __FUNCTION__ << "::" << __LINE__ << " isCKKS d=" << cryptoParams->GetCompositeDegree()
-                      << std::endl;
-            return GetScheme()->LevelReduce(ciphertext, evalKey, cryptoParams->GetCompositeDegree() * levels);
-        }
+
+        // if (isCKKS(m_schemeId)) {
+        //     const auto cryptoParams =
+        //         std::dynamic_pointer_cast<CryptoParametersRNS>(ciphertext->GetCryptoContext()->GetCryptoParameters());
+        //     return GetScheme()->LevelReduce(ciphertext, evalKey, cryptoParams->GetCompositeDegree() * levels);
+        // }
         return GetScheme()->LevelReduce(ciphertext, evalKey, levels);
     }
 
@@ -2330,23 +2324,23 @@ public:
    * LevelReduceInPlace - drops unnecessary RNS limbs (levels) from the ciphertext and evaluation key. Supported only in BGV/CKKS.
    * @param ciphertext input ciphertext (modified in place)
    * @param evalKey input evaluation key (modified in place)
+   * Note: In CKKS COMPOSITESCALING mode, it is assumed the number of levels passed as argument matches
+   * the number of levels in single scaling mode since it is altered internally.
    */
     void LevelReduceInPlace(Ciphertext<Element>& ciphertext, const EvalKey<Element> evalKey, size_t levels = 1) const {
         ValidateCiphertext(ciphertext);
         if (levels <= 0) {
             return;
         }
-        std::cout << __FUNCTION__ << "::" << __LINE__ << std::endl;
-        if (isCKKS(m_schemeId)) {
-            const auto cryptoParams =
-                std::dynamic_pointer_cast<CryptoParametersRNS>(ciphertext->GetCryptoContext()->GetCryptoParameters());
-            std::cout << __FUNCTION__ << "::" << __LINE__ << " isCKKS d=" << cryptoParams->GetCompositeDegree()
-                      << std::endl;
-            GetScheme()->LevelReduceInPlace(ciphertext, evalKey, cryptoParams->GetCompositeDegree() * levels);
-        }
-        else {
-            GetScheme()->LevelReduceInPlace(ciphertext, evalKey, levels);
-        }
+
+        // if (isCKKS(m_schemeId)) {
+        //     const auto cryptoParams =
+        //         std::dynamic_pointer_cast<CryptoParametersRNS>(ciphertext->GetCryptoContext()->GetCryptoParameters());
+        //     GetScheme()->LevelReduceInPlace(ciphertext, evalKey, cryptoParams->GetCompositeDegree() * levels);
+        // }
+        // else {
+        GetScheme()->LevelReduceInPlace(ciphertext, evalKey, levels);
+        // }
     }
     /**
    * Compress - Reduces the size of ciphertext modulus to minimize the

@@ -318,12 +318,12 @@ void FHECKKSRNS::EvalBootstrapPrecompute(const CryptoContextImpl<DCRTPoly>& cc, 
     uint32_t lEnc = L0 - compositeDegree * (precom->m_paramsEnc[CKKS_BOOT_PARAMS::LEVEL_BUDGET] + 1);
     uint32_t lDec = L0 - compositeDegree * depthBT;
 
-    // #ifdef DEBUG_COMPOSITE_SCALING
+#ifdef DEBUG_COMPOSITE_SCALING
     std::cout << __FUNCTION__ << "::Line" << __LINE__
               << ": lEnc = L0 - CompositeDegree * (level_budget[0] + 1) = " << lEnc << std::endl;
     std::cout << __FUNCTION__ << "::Line" << __LINE__ << ": lDec = L0 - CompositeDegree * depthBT = " << lDec
               << std::endl;
-    // #endif
+#endif
 
     bool isLTBootstrap = (precom->m_paramsEnc[CKKS_BOOT_PARAMS::LEVEL_BUDGET] == 1) &&
                          (precom->m_paramsDec[CKKS_BOOT_PARAMS::LEVEL_BUDGET] == 1);
@@ -386,7 +386,6 @@ Ciphertext<DCRTPoly> FHECKKSRNS::EvalBootstrap(ConstCiphertext<DCRTPoly> ciphert
     auto initSizeQ        = ciphertext->GetElements()[0].GetNumOfElements();
     usint compositeDegree = cryptoParams->GetCompositeDegree();
 
-    std::cout << __FUNCTION__ << "::" << __LINE__ << " compositeDegree=" << compositeDegree << std::endl;
     if (numIterations > 1) {
         // Step 1: Get the input.
         uint32_t powerOfTwoModulus = 1 << precision;
@@ -520,18 +519,12 @@ Ciphertext<DCRTPoly> FHECKKSRNS::EvalBootstrap(ConstCiphertext<DCRTPoly> ciphert
     // it's being raised to.
     // Increasing the modulus
 
-    std::cout << __FUNCTION__ << "::" << __LINE__ << "Before ModReduceInternalInPlace call." << std::endl;
     Ciphertext<DCRTPoly> raised = ciphertext->Clone();
     auto algo                   = cc->GetScheme();
     algo->ModReduceInternalInPlace(raised, compositeDegree * (raised->GetNoiseScaleDeg() - 1));
-    std::cout << __FUNCTION__ << "::" << __LINE__ << "After ModReduceInternalInPlace call." << std::endl;
-    std::cout << __FUNCTION__ << "::" << __LINE__ << "raised level=" << raised->GetLevel() << std::endl;
 
-    std::cout << __FUNCTION__ << "::" << __LINE__ << "Before AdjustCiphertext call." << std::endl;
     AdjustCiphertext(raised, correction);
     auto ctxtDCRT = raised->GetElements();
-    std::cout << __FUNCTION__ << "::" << __LINE__ << "After AdjustCiphertext call." << std::endl;
-    std::cout << __FUNCTION__ << "::" << __LINE__ << "raised level=" << raised->GetLevel() << std::endl;
 
     if (compositeDegree > 1) {
         // TODO(@fdiasmor): Generalize it for compositeDegree > 2
@@ -621,12 +614,7 @@ Ciphertext<DCRTPoly> FHECKKSRNS::EvalBootstrap(ConstCiphertext<DCRTPoly> ciphert
 
     double constantEvalMult = pre * (1.0 / (k * N));
 
-    std::cout << __FUNCTION__ << "::" << __LINE__ << "Before EvalMultInPlace call (raised, constantEvalMult)."
-              << std::endl;
     cc->EvalMultInPlace(raised, constantEvalMult);
-    std::cout << __FUNCTION__ << "::" << __LINE__ << "After EvalMultInPlace call (raised, constantEvalMult)."
-              << std::endl;
-    std::cout << __FUNCTION__ << "::" << __LINE__ << "raised level=" << raised->GetLevel() << std::endl;
 
     // no linear transformations are needed for Chebyshev series as the range has been normalized to [-1,1]
     double coeffLowerBound = -1;
@@ -648,12 +636,9 @@ Ciphertext<DCRTPoly> FHECKKSRNS::EvalBootstrap(ConstCiphertext<DCRTPoly> ciphert
         //------------------------------------------------------------------------------
         // Running CoeffToSlot
         //------------------------------------------------------------------------------
-        std::cout << __FUNCTION__ << "::" << __LINE__
-                  << "Before ModReduceInternalInPlace call (raised, compositeDegree)." << std::endl;
+
         // need to call internal modular reduction so it also works for FLEXIBLEAUTO
         algo->ModReduceInternalInPlace(raised, compositeDegree);
-        std::cout << __FUNCTION__ << "::" << __LINE__
-                  << "After ModReduceInternalInPlace call (raised, compositeDegree)." << std::endl;
 
         // only one linear transform is needed as the other one can be derived
         auto ctxtEnc = (isLTBootstrap) ? EvalLinearTransform(precom->m_U0hatTPre, raised) :
@@ -673,8 +658,6 @@ Ciphertext<DCRTPoly> FHECKKSRNS::EvalBootstrap(ConstCiphertext<DCRTPoly> ciphert
         }
         else {
             if (ctxtEnc->GetNoiseScaleDeg() == 2) {
-                std::cout << __FUNCTION__ << "::" << __LINE__
-                          << "Before ModReduceInternalInPlace call (noiseScaleDeg==2)." << std::endl;
                 algo->ModReduceInternalInPlace(ctxtEnc, compositeDegree);
                 algo->ModReduceInternalInPlace(ctxtEncI, compositeDegree);
             }
@@ -683,7 +666,6 @@ Ciphertext<DCRTPoly> FHECKKSRNS::EvalBootstrap(ConstCiphertext<DCRTPoly> ciphert
         //------------------------------------------------------------------------------
         // Running Approximate Mod Reduction
         //------------------------------------------------------------------------------
-        std::cout << __FUNCTION__ << "::" << __LINE__ << "Before Approximate Mod Reduction." << std::endl;
 
         // Evaluate Chebyshev series for the sine wave
         ctxtEnc  = cc->EvalChebyshevSeries(ctxtEnc, coefficients, coeffLowerBound, coeffUpperBound);
@@ -746,7 +728,6 @@ Ciphertext<DCRTPoly> FHECKKSRNS::EvalBootstrap(ConstCiphertext<DCRTPoly> ciphert
         //------------------------------------------------------------------------------
         // Running PartialSum
         //------------------------------------------------------------------------------
-        std::cout << __FUNCTION__ << "::" << __LINE__ << "Running Partial Sum." << std::endl;
         for (uint32_t j = 1; j < N / (2 * slots); j <<= 1) {
             auto temp = cc->EvalRotate(raised, j * slots);
             cc->EvalAddInPlace(raised, temp);
@@ -759,7 +740,6 @@ Ciphertext<DCRTPoly> FHECKKSRNS::EvalBootstrap(ConstCiphertext<DCRTPoly> ciphert
         //------------------------------------------------------------------------------
         // Running CoeffsToSlots
         //------------------------------------------------------------------------------
-        std::cout << __FUNCTION__ << "::" << __LINE__ << "Running CoeffsToSlots." << std::endl;
         algo->ModReduceInternalInPlace(raised, compositeDegree);
 
         auto ctxtEnc = (isLTBootstrap) ? EvalLinearTransform(precom->m_U0hatTPre, raised) :
@@ -793,7 +773,6 @@ Ciphertext<DCRTPoly> FHECKKSRNS::EvalBootstrap(ConstCiphertext<DCRTPoly> ciphert
         //------------------------------------------------------------------------------
         // Running Approximate Mod Reduction
         //------------------------------------------------------------------------------
-        std::cout << __FUNCTION__ << "::" << __LINE__ << "Running Approximate Mod Reduction." << std::endl;
         // Evaluate Chebyshev series for the sine wave
         ctxtEnc = cc->EvalChebyshevSeries(ctxtEnc, coefficients, coeffLowerBound, coeffUpperBound);
 
@@ -1704,7 +1683,6 @@ Ciphertext<DCRTPoly> FHECKKSRNS::EvalLinearTransform(const std::vector<ConstPlai
                                                      ConstCiphertext<DCRTPoly> ct) const {
     uint32_t slots = A.size();
 
-    std::cout << __FUNCTION__ << "::" << __LINE__ << std::endl;
     auto pair = m_bootPrecomMap.find(slots);
     if (pair == m_bootPrecomMap.end()) {
         std::string errorMsg(std::string("Precomputations for ") + std::to_string(slots) +
@@ -1777,8 +1755,7 @@ Ciphertext<DCRTPoly> FHECKKSRNS::EvalLinearTransform(const std::vector<ConstPlai
 Ciphertext<DCRTPoly> FHECKKSRNS::EvalCoeffsToSlots(const std::vector<std::vector<ConstPlaintext>>& A,
                                                    ConstCiphertext<DCRTPoly> ctxt) const {
     uint32_t slots = ctxt->GetSlots();
-    std::cout << __FUNCTION__ << "::" << __LINE__ << std::endl;
-    auto pair = m_bootPrecomMap.find(slots);
+    auto pair      = m_bootPrecomMap.find(slots);
     if (pair == m_bootPrecomMap.end()) {
         std::string errorMsg(std::string("Precomputations for ") + std::to_string(slots) +
                              std::string(" slots were not generated") +
