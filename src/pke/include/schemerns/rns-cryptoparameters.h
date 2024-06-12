@@ -960,7 +960,8 @@ public:
     }
 
     const NativeInteger& GetScalingFactorInt(usint l) const {
-        if (m_scalTechnique == FLEXIBLEAUTO || m_scalTechnique == FLEXIBLEAUTOEXT) {
+        if (m_scalTechnique == FLEXIBLEAUTO || m_scalTechnique == FLEXIBLEAUTOEXT ||
+            m_scalTechnique == COMPOSITESCALINGAUTO || m_scalTechnique == COMPOSITESCALINGMANUAL) {
             if (l >= m_scalingFactorsInt.size()) {
                 // TODO: Return an error here.
                 return m_fixedSF;
@@ -971,7 +972,8 @@ public:
     }
 
     const NativeInteger& GetScalingFactorIntBig(usint l) const {
-        if (m_scalTechnique == FLEXIBLEAUTO || m_scalTechnique == FLEXIBLEAUTOEXT) {
+        if (m_scalTechnique == FLEXIBLEAUTO || m_scalTechnique == FLEXIBLEAUTOEXT ||
+            m_scalTechnique == COMPOSITESCALINGAUTO || m_scalTechnique == COMPOSITESCALINGMANUAL) {
             if (l >= m_scalingFactorsIntBig.size()) {
                 // TODO: Return an error here.
                 return m_fixedSF;
@@ -982,7 +984,8 @@ public:
     }
 
     const NativeInteger& GetModReduceFactorInt(uint32_t l = 0) const {
-        if (m_scalTechnique == FLEXIBLEAUTO || m_scalTechnique == FLEXIBLEAUTOEXT) {
+        if (m_scalTechnique == FLEXIBLEAUTO || m_scalTechnique == FLEXIBLEAUTOEXT ||
+            m_scalTechnique == COMPOSITESCALINGAUTO || m_scalTechnique == COMPOSITESCALINGMANUAL) {
             return m_qModt[l];
         }
         return m_fixedSF;

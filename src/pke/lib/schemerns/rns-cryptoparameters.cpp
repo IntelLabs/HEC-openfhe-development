@@ -131,7 +131,21 @@ void CryptoParametersRNS::PrecomputeCRTTables(KeySwitchTechnique ksTech, Scaling
                 maxBits = bits;
         }
         // Select number of primes in auxiliary CRT basis
-        sizeP              = ceil(static_cast<double>(maxBits) / auxBits);
+        sizeP = ceil(static_cast<double>(maxBits) / auxBits);
+        if (GetScalingTechnique() == COMPOSITESCALINGAUTO || GetScalingTechnique() == COMPOSITESCALINGMANUAL) {
+            usint compositeDegree = GetCompositeDegree();
+            switch (compositeDegree) {
+                case 0:  // not allowed
+                case 1:  // not composite
+                    break;
+                case 2:
+                    sizeP += (sizeP % 2);
+                    break;
+                default:
+                    sizeP += (sizeP % 4);
+                    break;
+            }
+        }
         uint64_t primeStep = FindAuxPrimeStep();
 
         // Choose special primes in auxiliary basis and compute their roots

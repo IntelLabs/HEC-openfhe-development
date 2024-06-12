@@ -73,7 +73,7 @@ void BootstrapExample(uint32_t numSlots) {
     * you do not need to set the ring dimension.
     */
     parameters.SetSecurityLevel(HEStd_NotSet);
-    parameters.SetRingDim(1 << 11);
+    parameters.SetRingDim(1 << 12);
 
     /*  A3) Key switching parameters.
     * By default, we use HYBRID key switching with a digit size of 3.
@@ -90,7 +90,7 @@ void BootstrapExample(uint32_t numSlots) {
     */
     // 32-bit CKKS bootstrapping with composite scaling.
     ScalingTechnique rescaleTech = COMPOSITESCALINGAUTO;
-    usint dcrtBits               = 57;
+    usint dcrtBits               = 59;
     usint firstMod               = 60;
     usint registerWordSize       = 32;
 
@@ -143,6 +143,7 @@ void BootstrapExample(uint32_t numSlots) {
 
     usint ringDim = cryptoContext->GetRingDimension();
     std::cout << "CKKS scheme is using ring dimension " << ringDim << std::endl << std::endl;
+    // numSlots = ringDim / 2;
 
     const auto cryptoParamsCKKSRNS =
         std::dynamic_pointer_cast<CryptoParametersCKKSRNS>(cryptoContext->GetCryptoParameters());
