@@ -414,18 +414,8 @@ Ciphertext<DCRTPoly> FHECKKSRNS::EvalBootstrap(ConstCiphertext<DCRTPoly> ciphert
             return ciphertext->Clone();
         }
 
-        if (cryptoParams->GetScalingTechnique() == COMPOSITESCALINGAUTO ||
-            cryptoParams->GetScalingTechnique() == COMPOSITESCALINGMANUAL) {  // remove this and test it
-            // Test for better precision
-            // Make the scaling factor of ctInitialBootstrap to be same with input ciphertext
-            auto sc_fix = cryptoParams->GetScalingFactorReal(L0 - initSizeQ) /
-                          cryptoParams->GetScalingFactorReal(L0 - bootstrappingSizeQ + compositeDegree);
-            cc->EvalMultInPlace(ctBootstrappedScaledDown, sc_fix);
-            cc->GetScheme()->ModReduceInternalInPlace(ctBootstrappedScaledDown, compositeDegree);
-            ctBootstrappedScaledDown->SetScalingFactor(cryptoParams->GetScalingFactorReal(L0 - initSizeQ));
-            bootstrappingSizeQ -= compositeDegree;
-        }
-        else {  // change on 6/4/2024
+        if (cryptoParams->GetScalingTechnique() != COMPOSITESCALINGAUTO &&
+            cryptoParams->GetScalingTechnique() != COMPOSITESCALINGMANUAL) {
             for (auto& cv : ctBootstrappedScaledDown->GetElements()) {
                 cv.DropLastElements(bootstrappingSizeQ - initSizeQ);
             }
@@ -791,7 +781,7 @@ Ciphertext<DCRTPoly> FHECKKSRNS::EvalBootstrap(ConstCiphertext<DCRTPoly> ciphert
             ApplyDoubleAngleIterations(ctxtEnc, numIter);
         }
 
-        if (cryptoParams->GetScalingTechnique() != COMPOSITESCALINGAUTO ||
+        if (cryptoParams->GetScalingTechnique() != COMPOSITESCALINGAUTO &&
             cryptoParams->GetScalingTechnique() != COMPOSITESCALINGMANUAL) {
             // scale the message back up after Chebyshev interpolation
             algo->MultByIntegerInPlace(ctxtEnc, scalar);
