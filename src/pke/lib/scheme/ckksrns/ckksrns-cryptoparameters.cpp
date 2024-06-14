@@ -92,7 +92,9 @@ void CryptoParametersCKKSRNS::PrecomputeCRTTables(KeySwitchTechnique ksTech, Sca
                 m_scalingFactorsReal[0] *= moduliQ[sizeQ - j - 1].ConvertToDouble();
             }
         }
+#ifdef DEBUG_COMPOSITE_SCALING
         std::cout << "scalingFactorsReal[0]=" << m_scalingFactorsReal[0] << std::endl;
+#endif
 
         if (extraBits == 0) {
             for (uint32_t k = 1; k < sizeQ; k++) {
@@ -112,7 +114,9 @@ void CryptoParametersCKKSRNS::PrecomputeCRTTables(KeySwitchTechnique ksTech, Sca
                     double prevSF           = m_scalingFactorsReal[k - 1];
                     m_scalingFactorsReal[k] = prevSF * prevSF / moduliQ[sizeQ - k].ConvertToDouble();
                 }
+#ifdef DEBUG_COMPOSITE_SCALING
                 std::cout << "scalingFactorsReal[k=" << k << "]=" << m_scalingFactorsReal[k] << std::endl;
+#endif
                 if (m_scalTechnique == FLEXIBLEAUTO || m_scalTechnique == FLEXIBLEAUTOEXT) {
                     double ratio = m_scalingFactorsReal[k] / m_scalingFactorsReal[0];
                     if (ratio <= 0.5 || ratio >= 2.0)
@@ -131,8 +135,10 @@ void CryptoParametersCKKSRNS::PrecomputeCRTTables(KeySwitchTechnique ksTech, Sca
                     m_scalingFactorsReal[i] = 1;
                     m_scalingFactorsReal[compositeDegree] *= moduliQ[sizeQ - compositeDegree - i - 1].ConvertToDouble();
                 }
+#ifdef DEBUG_COMPOSITE_SCALING
                 std::cout << "scalingFactorsReal[k=" << compositeDegree << "]=" << m_scalingFactorsReal[compositeDegree]
                           << std::endl;
+#endif
 
                 for (uint32_t k = (compositeDegree + 1); k < sizeQ; k++) {
                     if (k % compositeDegree == 0) {
@@ -152,7 +158,9 @@ void CryptoParametersCKKSRNS::PrecomputeCRTTables(KeySwitchTechnique ksTech, Sca
                     else {
                         m_scalingFactorsReal[k] = 1;
                     }
+#ifdef DEBUG_COMPOSITE_SCALING
                     std::cout << "scalingFactorsReal[k=" << k << "]=" << m_scalingFactorsReal[k] << std::endl;
+#endif
                 }
             }
             else {

@@ -438,7 +438,6 @@ Ciphertext<DCRTPoly> FHECKKSRNS::EvalBootstrap(ConstCiphertext<DCRTPoly> ciphert
     }
 
     uint32_t slots = ciphertext->GetSlots();
-    std::cout << __FUNCTION__ << "::" << __LINE__ << " #slots=" << slots << std::endl;
 
     auto pair = m_bootPrecomMap.find(slots);
     if (pair == m_bootPrecomMap.end()) {
