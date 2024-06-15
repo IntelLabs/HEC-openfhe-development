@@ -644,7 +644,9 @@ Ciphertext<DCRTPoly> AdvancedSHECKKSRNS::EvalChebyshevSeriesLinear(ConstCipherte
 
     // computes linear transformation y = -1 + 2 (x-a)/(b-a)
     // consumes one level when a <> -1 && b <> 1
-    auto cc = x->GetCryptoContext();
+    auto cc                 = x->GetCryptoContext();
+    const auto cryptoParams = std::dynamic_pointer_cast<CryptoParametersRNS>(cc->GetCryptoParameters());
+    usint compositeDegree   = cryptoParams->GetCompositeDegree();
     std::vector<Ciphertext<DCRTPoly>> T(k);
     if ((a - std::round(a) < 1e-10) && (b - std::round(b) < 1e-10) && (std::round(a) == -1) && (std::round(b) == 1)) {
         T[0] = x->Clone();
@@ -674,14 +676,14 @@ Ciphertext<DCRTPoly> AdvancedSHECKKSRNS::EvalChebyshevSeriesLinear(ConstCipherte
             cc->EvalAddInPlace(T[i - 1], -1.0);
             // TODO: (Andrey) Do we need this?
             if (i == 2) {
-                cc->LevelReduceInPlace(T[i / 2 - 1], nullptr);
-                cc->LevelReduceInPlace(yReduced, nullptr);
+                cc->LevelReduceInPlace(T[i / 2 - 1], nullptr, compositeDegree);
+                cc->LevelReduceInPlace(yReduced, nullptr, compositeDegree);
             }
-            cc->LevelReduceInPlace(yReduced, nullptr);  // depth log_2 i + 1
+            cc->LevelReduceInPlace(yReduced, nullptr, compositeDegree);  // depth log_2 i + 1
 
             // i/2 will now be used only at a lower level
             if (i / 2 > 1) {
-                cc->LevelReduceInPlace(T[i / 2 - 1], nullptr);
+                cc->LevelReduceInPlace(T[i / 2 - 1], nullptr, compositeDegree);
             }
             // TODO: (Andrey) until here.
             // If we need it, we can also add it in EvalChebyshevSeriesPS
@@ -734,7 +736,9 @@ Ciphertext<DCRTPoly> AdvancedSHECKKSRNS::InnerEvalChebyshevPS(ConstCiphertext<DC
                                                               const std::vector<double>& coefficients, uint32_t k,
                                                               uint32_t m, std::vector<Ciphertext<DCRTPoly>>& T,
                                                               std::vector<Ciphertext<DCRTPoly>>& T2) const {
-    auto cc = x->GetCryptoContext();
+    auto cc                 = x->GetCryptoContext();
+    const auto cryptoParams = std::dynamic_pointer_cast<CryptoParametersRNS>(cc->GetCryptoParameters());
+    usint compositeDegree   = cryptoParams->GetCompositeDegree();
 
     // Compute k*2^{m-1}-k because we use it a lot
     uint32_t k2m2k = k * (1 << (m - 1)) - k;
@@ -872,7 +876,7 @@ Ciphertext<DCRTPoly> AdvancedSHECKKSRNS::InnerEvalChebyshevPS(ConstCiphertext<DC
         cc->EvalAddInPlace(su, s2.front() / 2);
         // The number of levels of su is the same as the number of levels of T[k-1] or T[k-1] + 1. Need to reduce it to T2[m-1] + 1.
         // su = cc->LevelReduce(su, nullptr, su->GetElements()[0].GetNumOfElements() - Lm + 1) ;
-        cc->LevelReduceInPlace(su, nullptr);
+        cc->LevelReduceInPlace(su, nullptr, compositeDegree);
     }
 
     Ciphertext<DCRTPoly> result;

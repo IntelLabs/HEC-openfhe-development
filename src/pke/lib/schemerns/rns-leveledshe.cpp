@@ -391,14 +391,16 @@ Ciphertext<DCRTPoly> LeveledSHERNS::Compress(ConstCiphertext<DCRTPoly> ciphertex
     Ciphertext<DCRTPoly> result = std::make_shared<CiphertextImpl<DCRTPoly>>(*ciphertext);
     const auto cryptoParams     = std::dynamic_pointer_cast<CryptoParametersRNS>(ciphertext->GetCryptoParameters());
 
+    usint levelsToDrop = BASE_NUM_LEVELS_TO_DROP;
+    if (cryptoParams->GetScalingTechnique() == COMPOSITESCALINGAUTO ||
+        cryptoParams->GetScalingTechnique() == COMPOSITESCALINGMANUAL) {
+        usint compositeDegree = cryptoParams->GetCompositeDegree();
+        levelsToDrop          = compositeDegree;
+        // towersLeft *= compositeDegree;
+    }
+
     while (result->GetNoiseScaleDeg() > 1) {
-        if (cryptoParams->GetScalingTechnique() == COMPOSITESCALINGAUTO ||
-            cryptoParams->GetScalingTechnique() == COMPOSITESCALINGMANUAL) {
-            ModReduceInternalInPlace(result, cryptoParams->GetCompositeDegree());
-        }
-        else {
-            ModReduceInternalInPlace(result, BASE_NUM_LEVELS_TO_DROP);
-        }
+        ModReduceInternalInPlace(result, levelsToDrop);
     }
     const std::vector<DCRTPoly>& cv = result->GetElements();
     usint sizeQl                    = cv[0].GetNumOfElements();

@@ -2306,7 +2306,7 @@ public:
    * @param evalKey input evaluation key (modified in place)
    * @returns the ciphertext with reduced number opf RNS limbs
    * Note: In CKKS COMPOSITESCALING mode, it is assumed the number of levels passed as argument matches
-   * the number of levels in single scaling mode since it is altered internally.
+   * the number of levels in single scaling mode since it is altered internally to reflect the composite degree.
    */
     Ciphertext<Element> LevelReduce(ConstCiphertext<Element> ciphertext, const EvalKey<Element> evalKey,
                                     size_t levels = 1) const {

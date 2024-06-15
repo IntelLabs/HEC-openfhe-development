@@ -518,10 +518,12 @@ Ciphertext<DCRTPoly> FHECKKSRNS::EvalBootstrap(ConstCiphertext<DCRTPoly> ciphert
 
     if (compositeDegree > 1) {
         // TODO(@fdiasmor): Generalize it for compositeDegree > 2
-        NativeInteger q0 = elementParamsRaisedPtr->GetParams()[0]->GetModulus().ConvertToInt();
-        NativeInteger q1 = elementParamsRaisedPtr->GetParams()[1]->GetModulus().ConvertToInt();
-        // NativeInteger q1_inv_modq0 = q1.ModInverse(q0).Mod(q0);
-        // NativeInteger q0_inv_modq1 = q0.ModInverse(q1).Mod(q1);
+        // Duhyeong's notes:
+        // CompositeDegree = 2: [a]_q0q1     =     [a*q1^-1]_q0 *     q1 + [a*q0^-1]_q1 *q0
+        // CompositeDegree = 3: [a]_q0q1q2   =   [a*q1q2^-1]_q0 *   q1q2 + [a*q0q2^-1]_q1 *q0q2 + [a*q0q1^-1]_q2 *q0q1
+        // CompositeDegree = 4: [a]_q0q1q2q3 = [a*q1q2q3^-1]_q0 * q1q2q3 + [a*q0q2q3^-1]_q1 * q0q2q3 + [a*q0q1q3^-1]_q2 * q0q1q3 + [a*q0q1q2^-1]_q3 * q0q1q2
+        NativeInteger q0             = elementParamsRaisedPtr->GetParams()[0]->GetModulus().ConvertToInt();
+        NativeInteger q1             = elementParamsRaisedPtr->GetParams()[1]->GetModulus().ConvertToInt();
         NativeInteger qhat_modq0     = q1.Mod(q0);
         NativeInteger qhat_modq1     = q0.Mod(q1);
         NativeInteger qhat_inv_modq0 = qhat_modq0.ModInverse(q0);
@@ -531,9 +533,6 @@ Ciphertext<DCRTPoly> FHECKKSRNS::EvalBootstrap(ConstCiphertext<DCRTPoly> ciphert
             DCRTPoly temp0(elementParamsRaisedPtr, COEFFICIENT);
             DCRTPoly temp1(elementParamsRaisedPtr, COEFFICIENT);
             DCRTPoly temp2(elementParamsRaisedPtr, COEFFICIENT);
-
-            // DCRTPoly ctxtDCRT_q1inv_modq0(elementParamsRaisedPtr, COEFFICIENT);
-            // DCRTPoly ctxtDCRT_q0inv_modq1(elementParamsRaisedPtr, COEFFICIENT);
 
             DCRTPoly ctxtDCRT_modq0(elementParamsRaisedPtr, COEFFICIENT);
             DCRTPoly ctxtDCRT_modq1(elementParamsRaisedPtr, COEFFICIENT);
