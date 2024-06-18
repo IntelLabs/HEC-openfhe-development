@@ -522,45 +522,83 @@ Ciphertext<DCRTPoly> FHECKKSRNS::EvalBootstrap(ConstCiphertext<DCRTPoly> ciphert
         // CompositeDegree = 2: [a]_q0q1     =     [a*q1^-1]_q0 *     q1 + [a*q0^-1]_q1 *q0
         // CompositeDegree = 3: [a]_q0q1q2   =   [a*q1q2^-1]_q0 *   q1q2 + [a*q0q2^-1]_q1 *q0q2 + [a*q0q1^-1]_q2 *q0q1
         // CompositeDegree = 4: [a]_q0q1q2q3 = [a*q1q2q3^-1]_q0 * q1q2q3 + [a*q0q2q3^-1]_q1 * q0q2q3 + [a*q0q1q3^-1]_q2 * q0q1q3 + [a*q0q1q2^-1]_q3 * q0q1q2
-        NativeInteger q0             = elementParamsRaisedPtr->GetParams()[0]->GetModulus().ConvertToInt();
-        NativeInteger q1             = elementParamsRaisedPtr->GetParams()[1]->GetModulus().ConvertToInt();
-        NativeInteger qhat_modq0     = q1.Mod(q0);
-        NativeInteger qhat_modq1     = q0.Mod(q1);
-        NativeInteger qhat_inv_modq0 = qhat_modq0.ModInverse(q0);
-        NativeInteger qhat_inv_modq1 = qhat_modq1.ModInverse(q1);
 
+        std::vector<NativeInteger> qj(compositeDegree);
+        for (uint32_t j = 0; j < compositeDegree; ++j) {
+            qj[j] = elementParamsRaisedPtr->GetParams()[j]->GetModulus().ConvertToInt();
+        }
+
+        // START: refactoring of the code to generalize to d > 2
+        std::vector<NativeInteger> qhat_modqj(compositeDegree);
+        qhat_modqj[0] = qj[1].Mod(qj[0]);
+        qhat_modqj[1] = qj[0].Mod(qj[1]);
+
+        std::vector<NativeInteger> qhat_inv_modqj(compositeDegree);
+        qhat_inv_modqj[0] = qhat_modqj[0].ModInverse(qj[0]);
+        qhat_inv_modqj[1] = qhat_modqj[1].ModInverse(qj[1]);
+
+        for (uint32_t d = 2; d < compositeDegree; d++) {
+            for (uint32_t j = 0; j < d; ++j) {
+                qhat_modqj[j] = qj[d].ModMul(qhat_modqj[j], qj[j]);
+            }
+            qhat_modqj[d] = qj[1].ModMul(qj[0], qj[d]);
+            for (uint32_t j = 1; j < d; ++j) {
+                qhat_modqj[d] = qj[j].ModMul(qhat_modqj[d], qj[d]);
+            }
+        }
+
+        for (uint32_t j = 0; j < compositeDegree; ++j) {
+            qhat_inv_modqj[j] = qhat_modqj[j].ModInverse(qj[j]);
+        }
+        // END: refactoring of the code to generalize to d > 2
+
+        uint32_t init_element_index = compositeDegree;
         for (size_t i = 0; i < ctxtDCRT.size(); i++) {
-            DCRTPoly temp0(elementParamsRaisedPtr, COEFFICIENT);
-            DCRTPoly temp1(elementParamsRaisedPtr, COEFFICIENT);
-            DCRTPoly temp2(elementParamsRaisedPtr, COEFFICIENT);
-
-            DCRTPoly ctxtDCRT_modq0(elementParamsRaisedPtr, COEFFICIENT);
-            DCRTPoly ctxtDCRT_modq1(elementParamsRaisedPtr, COEFFICIENT);
+            std::vector<DCRTPoly> temp(compositeDegree + 1, DCRTPoly(elementParamsRaisedPtr, COEFFICIENT));
+            std::vector<DCRTPoly> ctxtDCRT_modq(compositeDegree, DCRTPoly(elementParamsRaisedPtr, COEFFICIENT));
 
             ctxtDCRT[i].SetFormat(COEFFICIENT);
 
             for (size_t j = 0; j < ctxtDCRT[i].GetNumOfElements(); j++) {
-                ctxtDCRT_modq0.SetElementAtIndex(j, ctxtDCRT[i].GetElementAtIndex(j) * qhat_inv_modq0);
-                ctxtDCRT_modq1.SetElementAtIndex(j, ctxtDCRT[i].GetElementAtIndex(j) * qhat_inv_modq1);
+                for (size_t k = 0; k < compositeDegree; k++)
+                    ctxtDCRT_modq[k].SetElementAtIndex(j, ctxtDCRT[i].GetElementAtIndex(j) * qhat_inv_modqj[k]);
             }
 
-            temp0 = ctxtDCRT_modq0.GetElementAtIndex(0);
-
+            temp[0] = ctxtDCRT_modq[0].GetElementAtIndex(0);
             for (size_t j = 0; j < elementParamsRaisedPtr->GetParams().size(); j++) {
-                temp0.SetElementAtIndex(j, temp0.GetElementAtIndex(j) * q1);
-            }
-            // Duhyeong: ctxtDCRT[i].GetElementAtIndex(1) mod q0 is not correct for now. Very weird....
-            temp2 = ctxtDCRT_modq1.GetElementAtIndex(1);
-            // Duhyeong: Artificially made temp1 mod q0 to be 0....
-            temp1.SetElementAtIndex(0, temp0.GetElementAtIndex(0) * q0);
-            for (size_t j = 1; j < elementParamsRaisedPtr->GetParams().size(); j++) {
-                temp1.SetElementAtIndex(j, temp2.GetElementAtIndex(j) * q0);
+                for (size_t k = 1; k < compositeDegree; k++)
+                    temp[0].SetElementAtIndex(j, temp[0].GetElementAtIndex(j) * qj[k]);
             }
 
-            temp0 += temp1;
+            for (size_t d = 1; d < compositeDegree; d++) {
+                temp[init_element_index] = ctxtDCRT_modq[d].GetElementAtIndex(d);
 
-            temp0.SetFormat(EVALUATION);
-            ctxtDCRT[i] = temp0;
+                for (size_t k = 0; k < compositeDegree; k++) {
+                    if (k != d) {
+                        temp[d].SetElementAtIndex(k, temp[0].GetElementAtIndex(k) * qj[k]);
+                    }
+                }
+
+                for (size_t j = compositeDegree; j < elementParamsRaisedPtr->GetParams().size(); j++) {
+                    temp[d].SetElementAtIndex(j, temp[init_element_index].GetElementAtIndex(j) * qj[0]);
+                    for (size_t k = 1; k < compositeDegree; k++) {
+                        if (k != d) {
+                            temp[d].SetElementAtIndex(j, temp[d].GetElementAtIndex(j) * qj[k]);
+                        }
+                    }
+                }
+                temp[d].SetElementAtIndex(d, temp[init_element_index].GetElementAtIndex(d) * qj[0]);
+                for (size_t k = 1; k < compositeDegree; k++) {
+                    if (k != d) {
+                        temp[d].SetElementAtIndex(d, temp[d].GetElementAtIndex(d) * qj[k]);
+                    }
+                }
+
+                temp[0] += temp[d];
+            }
+
+            temp[0].SetFormat(EVALUATION);
+            ctxtDCRT[i] = temp[0];
         }
     }
     else {
