@@ -635,8 +635,13 @@ Ciphertext<DCRTPoly> FHECKKSRNS::EvalBootstrap(ConstCiphertext<DCRTPoly> ciphert
         k = 1.0;  // do not divide by k as we already did it during precomputation
     }
     else {
-        coefficients = g_coefficientsUniform;
-        k            = K_UNIFORM;
+        if (compositeDegree < 3) {
+            coefficients = g_coefficientsUniform;
+        }
+        else {
+            coefficients = g_coefficientsUniformExt;
+        }
+        k = K_UNIFORM;
     }
 
     double constantEvalMult = pre * (1.0 / (k * N));
@@ -2573,6 +2578,51 @@ Plaintext FHECKKSRNS::MakeAuxPlaintext(const CryptoContextImpl<DCRTPoly>& cc, co
 
     DCRTPoly::Integer intPowP{static_cast<uint64_t>(std::llround(powP))};
     std::vector<DCRTPoly::Integer> crtPowP(numTowers, intPowP);
+    if (cryptoParams->GetScalingTechnique() == COMPOSITESCALINGAUTO ||
+        cryptoParams->GetScalingTechnique() == COMPOSITESCALINGMANUAL) {
+        // Duhyeong: Support the case powP > 2^64
+        //           Later we might need to use the NATIVE_INT=128 version of FHECKKSRNS::MakeAuxPlaintext for higher precision
+        int32_t logPowP = static_cast<int32_t>(ceil(log2(fabs(powP))));
+        // DCRTPoly::Integer intPowP;
+        int32_t logApprox_PowP;
+        if (logPowP > 64) {
+            // Compute approxFactor, a value to scale down by, in case the value exceeds a 64-bit integer.
+            logValid       = (logPowP <= LargeScalingFactorConstants::MAX_BITS_IN_WORD) ?
+                                 logPowP :
+                                 LargeScalingFactorConstants::MAX_BITS_IN_WORD;
+            logApprox_PowP = logPowP - logValid;
+            approxFactor   = pow(2, logApprox_PowP);
+            // Multiply scFactor in two steps: powP / approxFactor and then approxFactor
+            intPowP = std::llround(powP / approxFactor);
+        }
+        else {
+            intPowP = std::llround(powP);
+        }
+
+        // std::vector<DCRTPoly::Integer> crtPowP(numTowers, intPowP);
+        crtPowP.resize(numTowers, intPowP);
+
+        if (logPowP > 64) {
+            if (logApprox_PowP > 0) {
+                int32_t logStep           = (logApprox <= LargeScalingFactorConstants::MAX_LOG_STEP) ?
+                                                logApprox_PowP :
+                                                LargeScalingFactorConstants::MAX_LOG_STEP;
+                DCRTPoly::Integer intStep = uint64_t(1) << logStep;
+                std::vector<DCRTPoly::Integer> crtApprox(numTowers, intStep);
+                logApprox_PowP -= logStep;
+                while (logApprox_PowP > 0) {
+                    int32_t logStep           = (logApprox <= LargeScalingFactorConstants::MAX_LOG_STEP) ?
+                                                    logApprox :
+                                                    LargeScalingFactorConstants::MAX_LOG_STEP;
+                    DCRTPoly::Integer intStep = uint64_t(1) << logStep;
+                    std::vector<DCRTPoly::Integer> crtStep(numTowers, intStep);
+                    crtApprox = CKKSPackedEncoding::CRTMult(crtApprox, crtStep, moduli);
+                    logApprox_PowP -= logStep;
+                }
+                crtPowP = CKKSPackedEncoding::CRTMult(crtPowP, crtApprox, moduli);
+            }
+        }
+    }
 
     auto currPowP = crtPowP;
 

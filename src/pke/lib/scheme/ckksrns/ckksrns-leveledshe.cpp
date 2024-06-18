@@ -245,9 +245,11 @@ std::vector<DCRTPoly::Integer> LeveledSHECKKSRNS::GetElementForEvalAddOrSub(Cons
         int32_t logValid = (logSF <= LargeScalingFactorConstants::MAX_BITS_IN_WORD) ?
                                logSF :
                                LargeScalingFactorConstants::MAX_BITS_IN_WORD;
-        logApprox        = logSF - logValid;
+
+        logApprox = logSF - logValid;
     }
-    double approxFactor = pow(2, logApprox);
+    int32_t logApprox_cp = logApprox;
+    double approxFactor  = pow(2, logApprox);
 
     DCRTPoly::Integer scConstant = static_cast<uint64_t>(operand * scFactor / approxFactor + 0.5);
     std::vector<DCRTPoly::Integer> crtConstant(sizeQl, scConstant);
@@ -279,11 +281,55 @@ std::vector<DCRTPoly::Integer> LeveledSHECKKSRNS::GetElementForEvalAddOrSub(Cons
         return crtConstant;
     }
 
-    DCRTPoly::Integer intScFactor = static_cast<uint64_t>(scFactor + 0.5);
-    std::vector<DCRTPoly::Integer> crtScFactor(sizeQl, intScFactor);
+    // COMPOSITESCALING support to 128-bit scaling factor
+    if (cryptoParams->GetScalingTechnique() == COMPOSITESCALINGAUTO ||
+        cryptoParams->GetScalingTechnique() == COMPOSITESCALINGMANUAL) {
+        int32_t logSF_cp = static_cast<int32_t>(std::ceil(std::log2(res)));
+        // int32_t logValid_cp = (logSF_cp <= LargeScalingFactorConstants::MAX_BITS_IN_WORD) ?
+        //                        logSF_cp :
+        //                        LargeScalingFactorConstants::MAX_BITS_IN_WORD;
+        if (logSF_cp < 64) {
+            DCRTPoly::Integer intScFactor = static_cast<uint64_t>(scFactor + 0.5);
+            std::vector<DCRTPoly::Integer> crtScFactor(sizeQl, intScFactor);
+            for (usint i = 1; i < ciphertext->GetNoiseScaleDeg(); i++) {
+                crtConstant = CKKSPackedEncoding::CRTMult(crtConstant, crtScFactor, moduli);
+            }
+        }
+        else {
+            // Multiply scFactor in two steps: scFactor / approxFactor and then approxFactor
+            DCRTPoly::Integer intScFactor = static_cast<uint64_t>(scFactor / approxFactor + 0.5);
+            std::vector<DCRTPoly::Integer> crtScFactor(sizeQl, intScFactor);
+            for (usint i = 1; i < ciphertext->GetNoiseScaleDeg(); i++) {
+                crtConstant = CKKSPackedEncoding::CRTMult(crtConstant, crtScFactor, moduli);
+            }
+            if (logApprox_cp > 0) {
+                int32_t logStep           = (logApprox_cp <= LargeScalingFactorConstants::MAX_LOG_STEP) ?
+                                                logApprox_cp :
+                                                LargeScalingFactorConstants::MAX_LOG_STEP;
+                DCRTPoly::Integer intStep = uint64_t(1) << logStep;
+                std::vector<DCRTPoly::Integer> crtApprox(sizeQl, intStep);
+                logApprox_cp -= logStep;
 
-    for (usint i = 1; i < ciphertext->GetNoiseScaleDeg(); i++) {
-        crtConstant = CKKSPackedEncoding::CRTMult(crtConstant, crtScFactor, moduli);
+                while (logApprox_cp > 0) {
+                    int32_t logStep           = (logApprox_cp <= LargeScalingFactorConstants::MAX_LOG_STEP) ?
+                                                    logApprox_cp :
+                                                    LargeScalingFactorConstants::MAX_LOG_STEP;
+                    DCRTPoly::Integer intStep = uint64_t(1) << logStep;
+                    std::vector<DCRTPoly::Integer> crtSF(sizeQl, intStep);
+                    crtApprox = CKKSPackedEncoding::CRTMult(crtApprox, crtSF, moduli);
+                    logApprox_cp -= logStep;
+                }
+                crtConstant = CKKSPackedEncoding::CRTMult(crtConstant, crtApprox, moduli);
+            }
+        }
+    }
+    else {
+        DCRTPoly::Integer intScFactor = static_cast<uint64_t>(scFactor + 0.5);
+        std::vector<DCRTPoly::Integer> crtScFactor(sizeQl, intScFactor);
+
+        for (usint i = 1; i < ciphertext->GetNoiseScaleDeg(); i++) {
+            crtConstant = CKKSPackedEncoding::CRTMult(crtConstant, crtScFactor, moduli);
+        }
     }
 
     return crtConstant;
