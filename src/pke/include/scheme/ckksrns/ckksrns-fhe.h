@@ -282,6 +282,7 @@ private:
 
     const uint32_t K_SPARSE  = 28;   // upper bound for the number of overflows in the sparse secret case
     const uint32_t K_UNIFORM = 512;  // upper bound for the number of overflows in the uniform secret case
+    const uint32_t K_UNIFORMEXT = 768;  // upper bound for the number of overflows in the uniform secret case for compositeDegreee > 2
     static const uint32_t R_UNIFORM =
         6;  // number of double-angle iterations in CKKS bootstrapping. Must be static because it is used in a static function.
     static const uint32_t R_SPARSE =

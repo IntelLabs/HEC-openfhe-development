@@ -534,15 +534,13 @@ Ciphertext<DCRTPoly> FHECKKSRNS::EvalBootstrap(ConstCiphertext<DCRTPoly> ciphert
         qhat_modqj[1] = qj[0].Mod(qj[1]);
 
         std::vector<NativeInteger> qhat_inv_modqj(compositeDegree);
-        qhat_inv_modqj[0] = qhat_modqj[0].ModInverse(qj[0]);
-        qhat_inv_modqj[1] = qhat_modqj[1].ModInverse(qj[1]);
 
         for (uint32_t d = 2; d < compositeDegree; d++) {
             for (uint32_t j = 0; j < d; ++j) {
                 qhat_modqj[j] = qj[d].ModMul(qhat_modqj[j], qj[j]);
             }
             qhat_modqj[d] = qj[1].ModMul(qj[0], qj[d]);
-            for (uint32_t j = 1; j < d; ++j) {
+            for (uint32_t j = 2; j < d; ++j) {
                 qhat_modqj[d] = qj[j].ModMul(qhat_modqj[d], qj[d]);
             }
         }
@@ -637,11 +635,12 @@ Ciphertext<DCRTPoly> FHECKKSRNS::EvalBootstrap(ConstCiphertext<DCRTPoly> ciphert
     else {
         if (compositeDegree < 3) {
             coefficients = g_coefficientsUniform;
+            k = K_UNIFORM;
         }
         else {
             coefficients = g_coefficientsUniformExt;
+            k = K_UNIFORMEXT;
         }
-        k = K_UNIFORM;
     }
 
     double constantEvalMult = pre * (1.0 / (k * N));
