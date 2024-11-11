@@ -169,8 +169,8 @@ void FHECKKSRNS::EvalBootstrapSetup(const CryptoContextImpl<DCRTPoly>& cc, std::
         uint128_t factor = ((uint128_t)1 << ((uint32_t)std::round(std::log2(qDouble))));
         double pre       = (compositeDegree > 1) ? 1.0 : qDouble / factor;
         double k         = (cryptoParams->GetSecretKeyDist() == SPARSE_TERNARY) ? K_SPARSE : 1.0;
-        double scaleEnc  = pre / k;
-        double scaleDec  = (compositeDegree > 1) ? k * qDouble / cryptoParams->GetScalingFactorReal(0) : 1 / pre;
+        double scaleEnc  = (compositeDegree > 1) ? 1.0 / k : pre / k;
+        double scaleDec  = (compositeDegree > 1) ? qDouble / cryptoParams->GetScalingFactorReal(0) : 1 / pre;
 
         uint32_t approxModDepth = GetModDepthInternal(cryptoParams->GetSecretKeyDist());
         uint32_t depthBT        = approxModDepth + precom->m_paramsEnc[CKKS_BOOT_PARAMS::LEVEL_BUDGET] +
