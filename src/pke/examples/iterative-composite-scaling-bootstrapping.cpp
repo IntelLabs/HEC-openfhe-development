@@ -83,9 +83,9 @@ void IterativeBootstrapExample() {
 
     // All modes are supported for 64-bit CKKS bootstrapping.
     ScalingTechnique rescaleTech = COMPOSITESCALINGAUTO;
-    usint dcrtBits               = 57;
-    usint firstMod               = 60;
-    usint registerWordSize       = 32;
+    usint dcrtBits               = 61;
+    usint firstMod               = 66;
+    usint registerWordSize       = 27;
 
     parameters.SetScalingModSize(dcrtBits);
     parameters.SetScalingTechnique(rescaleTech);

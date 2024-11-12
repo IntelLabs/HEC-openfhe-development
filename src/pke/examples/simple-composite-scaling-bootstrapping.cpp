@@ -95,8 +95,8 @@ void SimpleBootstrapExample() {
     * below unless you are an FHE expert.
     */
     ScalingTechnique rescaleTech = COMPOSITESCALINGAUTO;
-    usint dcrtBits               = 54;
-    usint firstMod               = 59;
+    usint dcrtBits               = 64;
+    usint firstMod               = 66;
 
     parameters.SetScalingModSize(dcrtBits);
     parameters.SetScalingTechnique(rescaleTech);
@@ -175,8 +175,12 @@ void SimpleBootstrapExample() {
               << depth - ciphertextAfter->GetLevel() / compositeDegree << std::endl
               << std::endl;
 
-    std::cout << "scaling factor after bootstrapping: " << ciphertextAfter->GetScalingFactor() << std::endl;
-
+    std::cout << "Scaling factor after bootstrapping: " << ciphertextAfter->GetScalingFactor() << std::endl;
+    
+    std::cout << "Composite degree: " << cryptoParams->GetCompositeDegree() << std::endl;
+    std::cout << "Modulus bit length: " << static_cast<float>(dcrtBits) / cryptoParams->GetCompositeDegree() << std::endl;
+    std::cout << "Word register size: " << registerWordSize << std::endl;
+           
     Plaintext result;
     cryptoContext->Decrypt(keyPair.secretKey, ciphertextAfter, &result);
     result->SetLength(encodedLength);

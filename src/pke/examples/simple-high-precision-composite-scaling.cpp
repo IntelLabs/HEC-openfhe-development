@@ -83,8 +83,8 @@ int main() {
    * scaling factor should be large enough to both accommodate this noise and
    * support results that match the desired accuracy.
    */
-    uint32_t firstModSize = 96;
-    uint32_t scaleModSize = 88;
+    uint32_t firstModSize = 66;
+    uint32_t scaleModSize = 63;
 
     /* A3) Number of plaintext slots used in the ciphertext.
    * CKKS packs multiple plaintext values in each ciphertext.
@@ -103,7 +103,7 @@ int main() {
     /*
     * The word size in bits of the target hardware architecture.
     */
-    uint32_t registerWordSize = 32;
+    uint32_t registerWordSize = 27;
 
     /* A4) Desired security level based on FHE standards.
    * This parameter can take four values. Three of the possible values
