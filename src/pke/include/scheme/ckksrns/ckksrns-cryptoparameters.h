@@ -46,7 +46,7 @@ namespace lbcrypto {
 
 class CryptoParametersCKKSRNS : public CryptoParametersRNS {
     using ParmType = typename DCRTPoly::Params;
-    friend class ParameterGenerationCKKSRNS;  // Needed to configure composite degree across
+    // friend class ParameterGenerationCKKSRNS;  // Needed to configure composite degree across
 
 public:
     CryptoParametersCKKSRNS() : CryptoParametersRNS() {}
