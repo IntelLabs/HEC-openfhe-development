@@ -166,10 +166,10 @@ void CryptoParametersCKKSRNS::ConfigureCompositeDegree(usint scalingModSize) {
                 compositeDegree = (usint)std::ceil(static_cast<float>(scalingModSize) / registerWordSize);
                 // Assert minimum allowed bitwidth
                 // @fdiasmor: make it more robust to a range of multiplicative depth
-                if (static_cast<float>(scalingModSize) / compositeDegree < 16) {
+                if (static_cast<float>(scalingModSize) / compositeDegree < 21) {
                     OPENFHE_THROW(
                         config_error,
-                        "Moduli bitwidth too short (< 16) for target multiplicative depth. Consider increase the scaling factor or the register word size.");
+                        "Moduli bitwidth too short (< 21) for target multiplicative depth. Consider increase the scaling factor or the register word size.");
                 }
                 m_compositeDegree = compositeDegree;
             }  // else composite degree remains set to 1
