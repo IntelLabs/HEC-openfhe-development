@@ -95,14 +95,14 @@ void SimpleBootstrapExample() {
     * below unless you are an FHE expert.
     */
     ScalingTechnique rescaleTech = COMPOSITESCALINGAUTO;
-    usint dcrtBits               = 64;
-    usint firstMod               = 66;
+    usint dcrtBits               = 66;
+    usint firstMod               = 76;
 
     parameters.SetScalingModSize(dcrtBits);
     parameters.SetScalingTechnique(rescaleTech);
     parameters.SetFirstModSize(firstMod);
 
-    usint registerWordSize = 32;
+    usint registerWordSize = 27;
     parameters.SetRegisterWordSize(registerWordSize);
 
     /*  A4) Multiplicative depth.
@@ -159,6 +159,10 @@ void SimpleBootstrapExample() {
     // We start with a depleted ciphertext that has used up all of its levels.
     // Plaintext ptxt = cryptoContext->MakeCKKSPackedPlaintext(x, 1, depth - 1);
     Plaintext ptxt = cryptoContext->MakeCKKSPackedPlaintext(x, 1, compositeDegree * (depth - 1));
+
+    std::cout << "Composite degree: " << compositeDegree
+            << " Bit length: " << static_cast<float>(dcrtBits) / compositeDegree
+            << " Register size: " << registerWordSize << std::endl;
 
     ptxt->SetLength(encodedLength);
     std::cout << "Input: " << ptxt << std::endl;

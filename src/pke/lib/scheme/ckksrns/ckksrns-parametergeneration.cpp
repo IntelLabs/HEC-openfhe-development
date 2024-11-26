@@ -50,19 +50,51 @@ const size_t AUXMODSIZE = 60;
 void ParameterGenerationCKKSRNS::CompositePrimeModuliGen(std::vector<NativeInteger>& moduliQ,
                                                          std::vector<NativeInteger>& rootsQ, usint compositeDegree,
                                                          usint numPrimes, usint firstModSize, usint dcrtBits,
-                                                         usint cyclOrder) const {
+                                                         usint cyclOrder, usint registerWordSize) const {
     std::unordered_set<uint64_t> moduliQRecord;
+
+    std::cout << __FUNCTION__ << "::" << __LINE__ << " numPrimes=" << numPrimes
+              << " compositeDegree=" << compositeDegree << std::endl;
 
     // Sample q0, the first primes in the modulus chain
     NativeInteger q;
-    uint32_t qBitSize = 0;
+    uint32_t qBitSize = static_cast<double>(dcrtBits) / compositeDegree;
     uint32_t remBits  = dcrtBits;
-    for (uint32_t d = 1; d <= compositeDegree; ++d) {
-        qBitSize = static_cast<uint32_t>(std::ceil(static_cast<double>(remBits) / (compositeDegree - d + 1)));
+    // uint32_t regWdSize = 
+    q        = NativeInteger( ( FirstPrime<NativeInteger>(qBitSize-1, cyclOrder) + FirstPrime<NativeInteger>(qBitSize, cyclOrder) ) / 2);
+    std::cout << __FUNCTION__ << "::" << __LINE__ << " FirstPrime=" << q << " logq2=" << std::log2(q.ConvertToDouble())
+              << " qBitSize=" << qBitSize << " remBits=" << remBits << "\n";
+    // q        = NextPrime<NativeInteger>(q, cyclOrder);
+    // std::cout << __FUNCTION__ << "::" << __LINE__ << " NextPrime=" << q << " logq2=" << std::log2(q.ConvertToDouble())
+    //           << " qBitSize=" << qBitSize << " remBits=" << remBits << "\n";
+    
+    bool flip = false;
+    for (uint32_t d = 1; d <= compositeDegree; ++d) {        
+        // qBitSize = static_cast<uint32_t>(std::ceil(static_cast<double>(remBits) / (compositeDegree - d + 1)));
+        double numBits = static_cast<double>(remBits) / (compositeDegree - d + 1);
+        qBitSize = std::ceil(numBits);
         q        = FirstPrime<NativeInteger>(qBitSize, cyclOrder);
-        q        = PreviousPrime<NativeInteger>(q, cyclOrder);
-        while (std::log2(q.ConvertToDouble()) > qBitSize || moduliQRecord.find(q.ConvertToInt()) != moduliQRecord.end())
-            q = PreviousPrime<NativeInteger>(q, cyclOrder);
+        q        = NextPrime<NativeInteger>(q, cyclOrder);
+        while (std::log2(q.ConvertToDouble()) > numBits || moduliQRecord.find(q.ConvertToInt()) != moduliQRecord.end()) {
+//        while (moduliQRecord.find(q.ConvertToInt()) != moduliQRecord.end()) {
+            if (flip) {
+                q = NextPrime<NativeInteger>(q, cyclOrder);
+            } else {            
+                q = PreviousPrime<NativeInteger>(q, cyclOrder);
+            }
+            // flip = !flip;            
+        }
+        std::cout << __FUNCTION__ << "::" << __LINE__ << " d=" << d << " moduliQ=" << q
+                  << " logq2=" << std::log2(q.ConvertToDouble()) << " remBits=" << remBits << "\n";
+        // while (moduliQRecord.find(q.ConvertToInt()) != moduliQRecord.end()) {
+        //     if (d % 2) {
+        //         q = PreviousPrime<NativeInteger>(q, cyclOrder);
+        //     } else {
+        //         q = NextPrime<NativeInteger>(q, cyclOrder);
+        //     }
+        // }
+        std::cout << __FUNCTION__ << "::" << __LINE__ << " d=" << d << " moduliQ=" << q
+                              << " logq2=" << std::log2(q.ConvertToDouble()) << "\n";
         moduliQ[numPrimes - d] = q;
         rootsQ[numPrimes - d]  = RootOfUnity(cyclOrder, moduliQ[numPrimes - d]);
         moduliQRecord.emplace(q.ConvertToInt());
@@ -76,27 +108,48 @@ void ParameterGenerationCKKSRNS::CompositePrimeModuliGen(std::vector<NativeInteg
 
     std::vector<NativeInteger> qPrev(std::ceil(static_cast<double>(compositeDegree) / 2));
     std::vector<NativeInteger> qNext(compositeDegree - (uint32_t)qPrev.size());
+    // std::vector<NativeInteger> qPrev(1);
+    // std::vector<NativeInteger> innerPrimes((compositeDegree > 2) ? compositeDegree-2 : 1);
+    // std::vector<NativeInteger> qNext(1);
+    // bool altPrevNext = false;
 
     if (numPrimes > 1) {
         // Prep to compute initial scaling factor
         double sf = moduliQ[numPrimes - 1].ConvertToDouble();
+        double denom = moduliQ[numPrimes - 1].ConvertToDouble();
         for (uint32_t d = 2; d <= compositeDegree; ++d) {
             sf *= moduliQ[numPrimes - d].ConvertToDouble();
-        }
-        double denom = moduliQ[numPrimes - 1].ConvertToDouble();
-        for (usint d = 2; d <= compositeDegree; ++d) {
             denom *= moduliQ[numPrimes - d].ConvertToDouble();
+            std::cout << __FUNCTION__ << "::" << __LINE__ << " d=" << d << " moduliQ=" << q
+                  << " logq2=" << std::log2(q.ConvertToDouble()) << " sf=" << sf << "\n";
         }
 
+        // for (usint d = 2; d <= compositeDegree; ++d) {
+        //     denom *= moduliQ[numPrimes - d].ConvertToDouble();
+        // }
+
+        std::cout << "Composite degree: " << compositeDegree << std::endl;
+
         uint32_t cnt = 1;
+        // double sf0 = sf;
         for (usint i = numPrimes - compositeDegree; i >= 2 * compositeDegree; i -= compositeDegree) {
+            std::cout << "Selecting Prime Moduli for L=" << i/compositeDegree << std::endl;
             // Compute initial scaling factor
+            denom = 1.0;
             sf = static_cast<double>(std::pow(sf, 2));
             for (usint d = 0; d < compositeDegree; ++d) {
                 sf /= moduliQ[i + d].ConvertToDouble();
+                denom *= moduliQ[i + d].ConvertToDouble();
             }
+   
+            // denom = moduliQ[i].ConvertToDouble();
+            // for (usint d = 1; d < compositeDegree; ++d) {
+            //     denom *= moduliQ[i + d].ConvertToDouble();
+            // }
 
             auto sf_sqrt = std::pow((sf * sf) / denom, 1.0 / compositeDegree);  // std::sqrt((sf * sf) / denom);
+            std::cout << __FUNCTION__ << "::" << __LINE__ << " i=" << i << " sf_sqrt=" << sf_sqrt
+                  << " logsf_sqrt2=" << std::log2(sf_sqrt) << " sf=" << sf << "\n";
 
             NativeInteger sfInt = std::llround(sf_sqrt);
             NativeInteger sfRem = sfInt.Mod(cyclOrder);
@@ -108,36 +161,149 @@ void ParameterGenerationCKKSRNS::CompositePrimeModuliGen(std::vector<NativeInteg
             double primeProduct = 1.0;
             std::unordered_set<uint64_t> qCurrentRecord;  // current prime tracker
 
+            // for (uint32_t step = 0; step < (uint32_t)qPrev.size(); ++step) {
+            //     // qPrev[step] = sfInt - (NativeInteger(step + 1) * NativeInteger(cyclOrder)) - sfRem + NativeInteger(1);
+            //     qPrev[step] = sfInt - sfRem + NativeInteger(1) - NativeInteger(cyclOrder);
+            //     do {
+            //         if (step % 2 == 0) {
+            //             qPrev[step] = lbcrypto::PreviousPrime(qPrev[step], cyclOrder);
+            //         } else {
+            //             qPrev[step] = lbcrypto::NextPrime(qPrev[step], cyclOrder);
+            //         }
+            //         // qPrev[step] = lbcrypto::PreviousPrime(qPrev[step], cyclOrder);
+            //     } while (moduliQRecord.find(qPrev[step].ConvertToInt()) != moduliQRecord.end() ||
+            //              qCurrentRecord.find(qPrev[step].ConvertToInt()) != qCurrentRecord.end());
+            //     qCurrentRecord.emplace(qPrev[step].ConvertToInt());
+            //     primeProduct *= qPrev[step].ConvertToDouble();
+            //     sfInt = qPrev[step];
+            //     sfRem = sfInt.Mod(cyclOrder);
+            // }
+
             for (uint32_t step = 0; step < (uint32_t)qPrev.size(); ++step) {
-                qPrev[step] = sfInt - (NativeInteger(step + 1) * NativeInteger(cyclOrder)) - sfRem + NativeInteger(1);
+                // qPrev[step] = sfInt - (NativeInteger(step + 1) * NativeInteger(cyclOrder)) - sfRem + NativeInteger(1);
+                qPrev[step] = sfInt - sfRem + NativeInteger(1);// - NativeInteger(cyclOrder);
                 do {
+                    // if (step % 2 == 0) {
+                    //     qPrev[step] = lbcrypto::PreviousPrime(qPrev[step], cyclOrder);
+                    // } else {
+                    //     qPrev[step] = lbcrypto::NextPrime(qPrev[step], cyclOrder);
+                    // }
                     qPrev[step] = lbcrypto::PreviousPrime(qPrev[step], cyclOrder);
                 } while (moduliQRecord.find(qPrev[step].ConvertToInt()) != moduliQRecord.end() ||
                          qCurrentRecord.find(qPrev[step].ConvertToInt()) != qCurrentRecord.end());
                 qCurrentRecord.emplace(qPrev[step].ConvertToInt());
                 primeProduct *= qPrev[step].ConvertToDouble();
+                sfInt = qPrev[step];
+                sfRem = sfInt.Mod(cyclOrder);
             }
 
+            // qPrev[0] = sfInt - sfRem + NativeInteger(1) - NativeInteger(cyclOrder);
+            // do {
+            //     qPrev[0] = lbcrypto::PreviousPrime(qPrev[0], cyclOrder);
+            // } while (moduliQRecord.find(qPrev[0].ConvertToInt()) != moduliQRecord.end() ||
+            //             qCurrentRecord.find(qPrev[0].ConvertToInt()) != qCurrentRecord.end());
+            // qCurrentRecord.emplace(qPrev[0].ConvertToInt());
+            // primeProduct *= qPrev[0].ConvertToDouble();
+            // sfInt = qPrev[0];
+            // sfRem = sfInt.Mod(cyclOrder);
+
+            // for (uint32_t step = 0; step < compositeDegree-2; step++) {
+            //     std::cout << "step: " << step << std::endl;	
+            //     // innerPrimes[step] = sfInt - (NativeInteger(step + 1) * NativeInteger(cyclOrder)) - sfRem + NativeInteger(1);
+            //     // innerPrimes[step] = sfInt - sfRem + NativeInteger(1);
+            //     do {
+            //         switch (altPrevNext) {
+            //             case true: 
+            //                 innerPrimes[step] = sfInt - sfRem + NativeInteger(1) - NativeInteger(cyclOrder);
+            //                 innerPrimes[step] = lbcrypto::PreviousPrime(innerPrimes[step], cyclOrder);
+            //                 altPrevNext = false;
+            //                 break;
+            //             default:
+            //                 innerPrimes[step] = sfInt - sfRem + NativeInteger(1) + NativeInteger(cyclOrder);
+            //                 innerPrimes[step] = lbcrypto::NextPrime(innerPrimes[step], cyclOrder);
+            //                 altPrevNext = true;
+            //                 break;
+            //         }
+            //     } while (moduliQRecord.find(innerPrimes[step].ConvertToInt()) != moduliQRecord.end() ||
+            //              qCurrentRecord.find(innerPrimes[step].ConvertToInt()) != qCurrentRecord.end());
+            //     qCurrentRecord.emplace(innerPrimes[step].ConvertToInt());
+            //     primeProduct *= innerPrimes[step].ConvertToDouble();
+            //     sfInt = innerPrimes[step];
+            //     sfRem = sfInt.Mod(cyclOrder);
+            // }
+
+            // qNext[0] = sfInt - sfRem + NativeInteger(1) + NativeInteger(cyclOrder);
+            // std::cout << "find last prime" << std::endl;
+            // do {
+            //     std::cout << "qNext[0]: " << qNext[0] << std::endl;
+            //     qNext[0] = lbcrypto::NextPrime(qNext[0], cyclOrder);
+            // } while (moduliQRecord.find(qNext[0].ConvertToInt()) != moduliQRecord.end() ||
+            //             qCurrentRecord.find(qNext[0].ConvertToInt()) != qCurrentRecord.end());
+            // qCurrentRecord.emplace(qNext[0].ConvertToInt());
+            // primeProduct *= qNext[0].ConvertToDouble();
+            // sfInt = qNext[0];
+            // sfRem = sfInt.Mod(cyclOrder);
+
             for (uint32_t step = 0; step < (uint32_t)qNext.size(); ++step) {
-                qNext[step] = sfInt + (NativeInteger(step + 1) * NativeInteger(cyclOrder)) - sfRem + NativeInteger(1);
+                // qNext[step] = sfInt + (NativeInteger(step + 1) * NativeInteger(cyclOrder)) - sfRem + NativeInteger(1);
+                qNext[step] = sfInt - sfRem + NativeInteger(1); // + NativeInteger(cyclOrder);
                 do {
+                    // if (step % 2 == 0) {
+                    //     qNext[step] = lbcrypto::NextPrime(qNext[step], cyclOrder);
+                    // } else {
+                    //     qNext[step] = lbcrypto::PreviousPrime(qNext[step], cyclOrder);
+                    // }
                     qNext[step] = lbcrypto::NextPrime(qNext[step], cyclOrder);
                 } while (moduliQRecord.find(qNext[step].ConvertToInt()) != moduliQRecord.end() ||
                          qCurrentRecord.find(qNext[step].ConvertToInt()) != qCurrentRecord.end());
                 qCurrentRecord.emplace(qNext[step].ConvertToInt());
                 primeProduct *= qNext[step].ConvertToDouble();
+                sfInt = qNext[step];
+                sfRem = sfInt.Mod(cyclOrder);
             }
+
+            // for (uint32_t step = 0; step < (uint32_t)qNext.size(); ++step) {
+            //     // qNext[step] = sfInt + (NativeInteger(step + 1) * NativeInteger(cyclOrder)) - sfRem + NativeInteger(1);
+            //     qNext[step] = sfInt - sfRem + NativeInteger(1) + NativeInteger(cyclOrder);
+            //     do {
+            //         if((step + (uint32_t)(qPrev.size())) % 2 == 0) {
+            //             qNext[step] = lbcrypto::PreviousPrime(qNext[step], cyclOrder);
+            //         } else {
+            //             qNext[step] = lbcrypto::NextPrime(qNext[step], cyclOrder);
+            //         }
+            //         // qNext[step] = lbcrypto::NextPrime(qNext[step], cyclOrder);
+            //     } while (moduliQRecord.find(qNext[step].ConvertToInt()) != moduliQRecord.end() ||
+            //              qCurrentRecord.find(qNext[step].ConvertToInt()) != qCurrentRecord.end());
+            //     qCurrentRecord.emplace(qNext[step].ConvertToInt());
+            //     primeProduct *= qNext[step].ConvertToDouble();
+            //     sfInt = qNext[step];
+            //     sfRem = sfInt.Mod(cyclOrder);
+            // }
 
 #ifdef DEBUG_COMPOSITE_SCALING
             std::cout << __FUNCTION__ << "::" << __LINE__ << " i=" << i << " primeProduct=" << primeProduct
                       << " sf=" << sf << "\n";
 #endif
+
+                // assgin samples prime moduli to the chain
+                // moduliQ[i - 1] = qPrev[0];
+                // for (uint32_t d = 2; d < compositeDegree; ++d) {
+                //     moduliQ[i - d] = innerPrimes[d - 2];
+                // }
+                // moduliQ[i - compositeDegree] = qNext[0];
+                // for (uint32_t d = 1; d <= compositeDegree; ++d) {
+                //     rootsQ[i - d]  = RootOfUnity(cyclOrder, moduliQ[i - d]);
+                //     moduliQRecord.emplace(moduliQ[i - d].ConvertToInt());
+                // }
+
             if (cnt == 0) {
                 NativeInteger qPrevPrev = NativeInteger(qPrev[qPrev.size() - 1].ConvertToInt());
+                // NativeInteger qPrevPrev = NativeInteger(qPrev[0].ConvertToInt());
 #ifdef DEBUG_COMPOSITE_SCALING
                 std::cout << __FUNCTION__ << "::" << __LINE__ << " i=" << i << " qPrevPrev=" << qPrevPrev << "\n";
 #endif
                 while (primeProduct > sf) {
+                // while (primeProduct > sf0) {
                     do {
                         qCurrentRecord.erase(qPrevPrev.ConvertToInt());  // constant time
                         qPrevPrev = lbcrypto::PreviousPrime(qPrevPrev, cyclOrder);
@@ -150,6 +316,7 @@ void ParameterGenerationCKKSRNS::CompositePrimeModuliGen(std::vector<NativeInteg
                               << " primeProduct=" << primeProduct << " sf=" << sf << "\n";
 #endif
                     primeProduct /= qPrev[qPrev.size() - 1].ConvertToDouble();
+                    //primeProduct /= qPrev[0].ConvertToDouble();
                     primeProduct *= qPrevPrev.ConvertToDouble();
 
 #ifdef DEBUG_COMPOSITE_SCALING
@@ -158,6 +325,18 @@ void ParameterGenerationCKKSRNS::CompositePrimeModuliGen(std::vector<NativeInteg
                               << " sf=" << sf << "\n";
 #endif
                 }
+
+//                 // assgin samples prime moduli to the chain
+//                 moduliQ[i - 1] = qPrev[0];
+//                 for (uint32_t d = 2; d < compositeDegree; ++d) {
+//                     moduliQ[i - d] = innerPrimes[d - 2];
+//                 }
+//                 moduliQ[i - compositeDegree] = qNext[0];
+//                 for (uint32_t d = 1; d <= compositeDegree; ++d) {
+//                     rootsQ[i - d]  = RootOfUnity(cyclOrder, moduliQ[i - d]);
+//                     moduliQRecord.emplace(moduliQ[i - d].ConvertToInt());
+//                 }
+
                 for (uint32_t d = 1, p = 0, n = 0; d <= compositeDegree; ++d) {
                     int alternate = d % 2;
                     switch (alternate) {
@@ -168,10 +347,10 @@ void ParameterGenerationCKKSRNS::CompositePrimeModuliGen(std::vector<NativeInteg
                             moduliQ[i - d] = qNext[n++];
                             break;
                     }
-#ifdef DEBUG_COMPOSITE_SCALING
-                    std::cout << __FUNCTION__ << "::" << __LINE__ << " i=" << i << " moduliQ" << moduliQ[i - d]
+//#ifdef DEBUG_COMPOSITE_SCALING
+                    std::cout << __FUNCTION__ << "::" << __LINE__ << " i=" << i << " moduliQ=" << moduliQ[i - d]
                               << " logq2=" << std::log2(moduliQ[i - d].ConvertToDouble()) << "\n";
-#endif
+//#endif
                     rootsQ[i - d] = RootOfUnity(cyclOrder, moduliQ[i - d]);
                     moduliQRecord.emplace(moduliQ[i - d].ConvertToInt());
                 }
@@ -179,10 +358,12 @@ void ParameterGenerationCKKSRNS::CompositePrimeModuliGen(std::vector<NativeInteg
             }
             else {
                 NativeInteger qNextNext = NativeInteger(qNext[qNext.size() - 1].ConvertToInt());
+                // NativeInteger qNextNext = NativeInteger(qNext[0].ConvertToInt());
 #ifdef DEBUG_COMPOSITE_SCALING
                 std::cout << __FUNCTION__ << "::" << __LINE__ << " i=" << i << " qNextNext=" << qNextNext << "\n";
 #endif
                 while (primeProduct < sf) {
+                // while (primeProduct < sf0) {
                     do {
                         qCurrentRecord.erase(qNextNext.ConvertToInt());  // constant time
                         qNextNext = lbcrypto::NextPrime(qNextNext, cyclOrder);
@@ -195,6 +376,7 @@ void ParameterGenerationCKKSRNS::CompositePrimeModuliGen(std::vector<NativeInteg
                               << " primeProduct=" << primeProduct << " sf=" << sf << "\n";
 #endif
                     primeProduct /= qNext[qNext.size() - 1].ConvertToDouble();
+                    // primeProduct /= qNext[0].ConvertToDouble();
                     primeProduct *= qNextNext.ConvertToDouble();
 
 #ifdef DEBUG_COMPOSITE_SCALING
@@ -203,6 +385,18 @@ void ParameterGenerationCKKSRNS::CompositePrimeModuliGen(std::vector<NativeInteg
                               << " sf=" << sf << "\n";
 #endif
                 }
+
+//                 // assgin samples prime moduli to the chain
+//                 moduliQ[i - 1] = qPrev[0];
+//                 for (uint32_t d = 2; d < compositeDegree; ++d) {
+//                     moduliQ[i - d] = innerPrimes[d - 2];
+//                 }
+//                 moduliQ[i - compositeDegree] = qNext[0];
+//                 for (uint32_t d = 1; d <= compositeDegree; ++d) {
+//                     rootsQ[i - d]  = RootOfUnity(cyclOrder, moduliQ[i - d]);
+//                     moduliQRecord.emplace(moduliQ[i - d].ConvertToInt());
+//                 }
+
                 for (uint32_t d = 1, p = 0, n = 0; d <= compositeDegree; ++d) {
                     int alternate = d % 2;
                     switch (alternate) {
@@ -213,22 +407,22 @@ void ParameterGenerationCKKSRNS::CompositePrimeModuliGen(std::vector<NativeInteg
                             moduliQ[i - d] = qNext[n++];
                             break;
                     }
-#ifdef DEBUG_COMPOSITE_SCALING
-                    std::cout << __FUNCTION__ << "::" << __LINE__ << " i=" << i << " moduliQ" << moduliQ[i - d]
+//#ifdef DEBUG_COMPOSITE_SCALING
+                    std::cout << __FUNCTION__ << "::" << __LINE__ << " i=" << i << " moduliQ=" << moduliQ[i - d]
                               << " logq2=" << std::log2(moduliQ[i - d].ConvertToDouble()) << "\n";
-#endif
+//#endif
                     rootsQ[i - d] = RootOfUnity(cyclOrder, moduliQ[i - d]);
                     moduliQRecord.emplace(moduliQ[i - d].ConvertToInt());
-                }
+               }
                 cnt = 0;
             }
         }  // for loop
     }  // if numPrimes > 1
 
-    if (firstModSize == dcrtBits) {  // this requires dcrtBits < 60
-        OPENFHE_THROW(config_error, "firstModSize must be > scalingModSize.");
-    }
-    else {
+    //if (firstModSize == dcrtBits) {  // this requires dcrtBits < 60
+    //    OPENFHE_THROW(config_error, "firstModSize must be > scalingModSize.");
+    // }
+    // else {
         qBitSize = 0;
         remBits  = (uint32_t)firstModSize;
         for (uint32_t d = 1; d <= compositeDegree; ++d) {
@@ -237,7 +431,8 @@ void ParameterGenerationCKKSRNS::CompositePrimeModuliGen(std::vector<NativeInteg
             NativeInteger nextInteger = FirstPrime<NativeInteger>(qBitSize, cyclOrder);
             nextInteger               = PreviousPrime<NativeInteger>(nextInteger, cyclOrder);
             // Ensure it fits in 32-bit register
-            while (std::log2(nextInteger.ConvertToDouble()) > qBitSize ||
+            while ((std::log2(nextInteger.ConvertToDouble()) > qBitSize &&
+                    std::log2(nextInteger.ConvertToDouble()) <= registerWordSize) ||
                    moduliQRecord.find(nextInteger.ConvertToInt()) != moduliQRecord.end())
                 nextInteger = PreviousPrime<NativeInteger>(nextInteger, cyclOrder);
             // Store prime
@@ -246,12 +441,12 @@ void ParameterGenerationCKKSRNS::CompositePrimeModuliGen(std::vector<NativeInteg
             // Keep track of existing primes
             moduliQRecord.emplace(moduliQ[d - 1].ConvertToInt());
             remBits -= qBitSize;
-#ifdef DEBUG_COMPOSITE_SCALING
-            std::cout << __FUNCTION__ << "::" << __LINE__ << " moduliQ=" << moduliQ[d - 1]
+//#ifdef DEBUG_COMPOSITE_SCALING
+            std::cout << __FUNCTION__ << "::" << __LINE__ << " i=" << 1 << " moduliQ=" << moduliQ[d - 1]
                       << " logq2=" << std::log2(moduliQ[d - 1].ConvertToDouble()) << "\n";
-#endif
+//#endif
         }
-    }
+    // }
 
 #ifdef DEBUG_COMPOSITE_SCALING
     std::cout << __FUNCTION__ << "::" << __LINE__ << " prime moduli:" << std::endl;
@@ -367,6 +562,7 @@ bool ParameterGenerationCKKSRNS::ParamsGenCKKSRNS(std::shared_ptr<CryptoParamete
     // Determine appropriate composite degree automatically if scaling technique set to COMPOSITESCALINGAUTO
     cryptoParamsCKKSRNS->ConfigureCompositeDegree(firstModSize);
     usint compositeDegree = cryptoParamsCKKSRNS->GetCompositeDegree();
+    usint registerWordSize    = cryptoParamsCKKSRNS->GetRegisterWordSize();
     // compositeDegree *= (usint)1;  // @fdiasmor: Avoid unused variable compilation error.
     // if (compositeDegree > 2 && firstModSize > 64) {
     //     OPENFHE_THROW(config_error, "This COMPOSITESCALING* version does not support composite degree > 2.");
@@ -444,7 +640,7 @@ bool ParameterGenerationCKKSRNS::ParamsGenCKKSRNS(std::shared_ptr<CryptoParamete
     std::vector<NativeInteger> rootsQ(vecSize);
 
     if (scalTech == COMPOSITESCALINGAUTO || scalTech == COMPOSITESCALINGMANUAL) {
-        CompositePrimeModuliGen(moduliQ, rootsQ, compositeDegree, numPrimes, firstModSize, dcrtBits, cyclOrder);
+        CompositePrimeModuliGen(moduliQ, rootsQ, compositeDegree, numPrimes, firstModSize, dcrtBits, cyclOrder, registerWordSize);
     }
     else {
         SinglePrimeModuliGen(moduliQ, rootsQ, scalTech, numPrimes, firstModSize, dcrtBits, cyclOrder);

@@ -60,7 +60,7 @@ int main() {
    * For performance reasons, it's generally preferable to perform operations
    * in the shorted multiplicative depth possible.
    */
-    uint32_t multDepth = 2;
+    uint32_t multDepth = 16;
 
     /* A2) Bit-length of scaling factor.
    * CKKS works for real numbers, but these numbers are encoded as integers.
@@ -83,10 +83,25 @@ int main() {
    * scaling factor should be large enough to both accommodate this noise and
    * support results that match the desired accuracy.
    */
-    uint32_t firstModSize = 66;
-    uint32_t scaleModSize = 63;
+    // Example for composite degree d = 3, r = 32
+    uint32_t firstModSize = 96;
+    uint32_t scaleModSize = 88;
+    uint32_t registerWordSize = 32;
+    // Example for composite degree d = 4, r = 27
+    // uint32_t firstModSize = 108;
+    // uint32_t scaleModSize = 99;
+    // uint32_t registerWordSize = 27;
+    // Example for composite degree d = 2, r = 27
+    // uint32_t firstModSize = 76;
+    // uint32_t scaleModSize = 73;
+    // uint32_t registerWordSize = 27;
 
-    /* A3) Number of plaintext slots used in the ciphertext.
+    /*
+    * The word size in bits of the target hardware architecture.
+    */
+    // uint32_t registerWordSize = 27;
+
+  /* A3) Number of plaintext slots used in the ciphertext.
    * CKKS packs multiple plaintext values in each ciphertext.
    * The maximum number of slots depends on a security parameter called ring
    * dimension. In this instance, we don't specify the ring dimension directly,
@@ -99,11 +114,6 @@ int main() {
    * size is N/2, because of the way CKKS works.
    */
     uint32_t batchSize = 8;
-
-    /*
-    * The word size in bits of the target hardware architecture.
-    */
-    uint32_t registerWordSize = 27;
 
     /* A4) Desired security level based on FHE standards.
    * This parameter can take four values. Three of the possible values

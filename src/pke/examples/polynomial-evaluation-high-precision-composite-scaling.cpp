@@ -43,8 +43,13 @@ int main(int argc, char* argv[]) {
     TimeVar t;
 
     double timeEvalPoly1(0.0), timeEvalPoly2(0.0);
-    uint32_t firstModSize     = 119;
-    uint32_t scalingModSize   = 108;
+    // Parameters for d=4
+    // uint32_t firstModSize     = 106;
+    // uint32_t scalingModSize   = 104;
+    // uint32_t registerWordSize = 32;
+    // Parameters for d=3
+    uint32_t firstModSize     = 76; // 96
+    uint32_t scalingModSize   = 76; // 88
     uint32_t registerWordSize = 32;
 
     std::cout << "\n======EXAMPLE FOR EVALPOLY========\n" << std::endl;
