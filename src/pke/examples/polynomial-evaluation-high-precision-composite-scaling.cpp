@@ -39,6 +39,58 @@
 
 using namespace lbcrypto;
 
+void print_moduli_chain(const DCRTPoly& poly){
+    int num_primes = poly.GetNumOfElements();
+    double total_bit_len = 0.0;
+    for (int i = 0; i < num_primes; i++) {
+        auto qi = poly.GetParams()->GetParams()[i]->GetModulus();
+        std::cout << "q_" << i << ": "
+                    << qi
+                    << ",  log q_" << i <<": " << log(qi.ConvertToDouble()) / log(2)
+                    << std::endl;
+        total_bit_len += log(qi.ConvertToDouble()) / log(2);
+    }
+    std::cout << "Total bit length: " << total_bit_len << std::endl;
+}
+
+double getScaleApproxError(const DCRTPoly& poly, uint32_t numPrimes, uint32_t compositeDegree, uint32_t firstModSize, uint32_t scalingModSize) 
+{ 
+    double delta0 = std::pow(2.0,(double)firstModSize);
+    double delta = std::pow(2.0,(double)scalingModSize);
+    //uint32_t numPrimes = poly.GetNumOfElements();
+    auto q = poly.GetParams()->GetParams();
+ 
+    std::cout << "numPrimes=" << numPrimes << " compositeDegree=" << compositeDegree 
+	      << " firstModSize=" << firstModSize << " scalingModSize=" << scalingModSize << std::endl;
+
+    double prod = q[0]->GetModulus().ConvertToDouble();
+    std::cout << "q0_0: " << prod ;
+    for (uint32_t d = 1; d < compositeDegree; ++d) {
+       std::cout << " q0_" << d << ": " << q[d]->GetModulus().ConvertToDouble();
+       prod *= q[d]->GetModulus().ConvertToDouble();
+    }
+    std::cout << "\n";
+    double cumApproxError = std::abs(delta0-prod);
+
+    std::cout << "q0: " << prod << " delta0: " << delta0 << " approxErr=" << std::abs(delta0-prod) << std::endl;
+    
+    for (uint32_t i = compositeDegree; i < numPrimes; i+=compositeDegree) {
+        prod = q[i]->GetModulus().ConvertToDouble();
+        std::cout << "q"<<i/compositeDegree<<"_0: " << prod ;
+        for (uint32_t d = 1; d < compositeDegree; ++d) {
+           std::cout << " q"<<i/compositeDegree<<"_" << d << ": " << q[i+d]->GetModulus().ConvertToDouble();
+           prod *= q[i+d]->GetModulus().ConvertToDouble();
+        }
+        std::cout << "\n";
+        cumApproxError += std::abs(delta-prod);
+        std::cout << "q" << i/compositeDegree << ": " << prod << " delta: " << delta << " approxErr=" << std::abs(delta-prod) << std::endl;
+    }
+    
+    std::cout << "Average distance to scaling factor: " << cumApproxError/((numPrimes-compositeDegree)/compositeDegree) << std::endl;
+    
+    return cumApproxError/((numPrimes-compositeDegree)/compositeDegree);
+}
+
 int main(int argc, char* argv[]) {
     TimeVar t;
 
@@ -49,13 +101,14 @@ int main(int argc, char* argv[]) {
     // uint32_t registerWordSize = 32;
     // Parameters for d=3
     uint32_t firstModSize     = 76; // 96
-    uint32_t scalingModSize   = 76; // 88
+    uint32_t scalingModSize   = 74; // 88
     uint32_t registerWordSize = 32;
 
     std::cout << "\n======EXAMPLE FOR EVALPOLY========\n" << std::endl;
 
+    uint32_t multDepth = 7;
     CCParams<CryptoContextCKKSRNS> parameters;
-    parameters.SetMultiplicativeDepth(6);
+    parameters.SetMultiplicativeDepth(multDepth);
     parameters.SetFirstModSize(firstModSize);
     parameters.SetScalingModSize(scalingModSize);
 
@@ -69,9 +122,12 @@ int main(int argc, char* argv[]) {
     cc->Enable(ADVANCEDSHE);
 
     const auto cryptoParamsCKKSRNS = std::dynamic_pointer_cast<CryptoParametersCKKSRNS>(cc->GetCryptoParameters());
-    std::cout << "Composite Degree: " << cryptoParamsCKKSRNS->GetCompositeDegree() << "\nPrime Moduli Bit Length: "
+    uint32_t compositeDegree = cryptoParamsCKKSRNS->GetCompositeDegree();
+    std::cout << "Composite Degree: " << compositeDegree << "\nPrime Moduli Bit Length: "
               << static_cast<float>(scalingModSize) / cryptoParamsCKKSRNS->GetCompositeDegree()
               << "\nTarget HW Arch Word Size: " << registerWordSize << std::endl;
+
+
 
     std::vector<std::complex<double>> input({0.5, 0.7, 0.9, 0.95, 0.93});
 
@@ -81,6 +137,9 @@ int main(int argc, char* argv[]) {
     std::vector<double> coefficients2({1,   2,   3,   4,   5,   -1,   -2,   -3,   -4,   -5,
                                        0.1, 0.2, 0.3, 0.4, 0.5, -0.1, -0.2, -0.3, -0.4, -0.5,
                                        0.1, 0.2, 0.3, 0.4, 0.5, -0.1, -0.2, -0.3, -0.4, -0.5});
+    // std::vector<double> coefficients2({0,   0,   0,   0,   0,   -0,   -0,   -0,   -0,   -0,
+    //                                    0., 0., 0., 0., 0., -0., -0., -0., -0., -0.,
+    //                                    0., 0., 0., 0., 0., -0., -0., -0., -0., -0.});
     Plaintext plaintext1 = cc->MakeCKKSPackedPlaintext(input);
 
     auto keyPair = cc->KeyGen();
@@ -88,6 +147,14 @@ int main(int argc, char* argv[]) {
     std::cout << "Generating evaluation key for homomorphic multiplication...";
     cc->EvalMultKeyGen(keyPair.secretKey);
     std::cout << "Completed." << std::endl;
+
+    const std::vector<DCRTPoly>& ckkspk = keyPair.publicKey->GetPublicElements();
+    std::cout << "Moduli chain of pk: " << std::endl;
+    print_moduli_chain(ckkspk[0]);
+
+    double avgScaleError = getScaleApproxError(ckkspk[0], (multDepth+1)*compositeDegree, 
+		    compositeDegree, firstModSize, scalingModSize);
+    std::cout << "Average Scale Error: " << avgScaleError << std::endl;
 
     auto ciphertext1 = cc->Encrypt(keyPair.publicKey, plaintext1);
 
