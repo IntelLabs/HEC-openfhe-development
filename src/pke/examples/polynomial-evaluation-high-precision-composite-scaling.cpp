@@ -100,13 +100,52 @@ int main(int argc, char* argv[]) {
     // uint32_t scalingModSize   = 104;
     // uint32_t registerWordSize = 32;
     // Parameters for d=3
-    uint32_t firstModSize     = 76; // 96
-    uint32_t scalingModSize   = 74; // 88
+    uint32_t firstModSize     = 96;
+    uint32_t scalingModSize   = 80;
     uint32_t registerWordSize = 32;
 
     std::cout << "\n======EXAMPLE FOR EVALPOLY========\n" << std::endl;
 
     uint32_t multDepth = 7;
+    int argcCount = 0;
+    if (argc > 1) {
+        while (argcCount < argc) {
+            uint32_t paramValue = atoi(argv[argcCount]);
+            switch (argcCount) {
+                case 1:
+                    firstModSize = paramValue;
+                    std::cout << "Setting First Mod Size: " << firstModSize << std::endl;
+                    break;
+                case 2:
+                    scalingModSize = paramValue;
+                    std::cout << "Setting Scaling Mod Size: " << scalingModSize << std::endl;
+                    break;
+                case 3:
+                    registerWordSize = paramValue;
+                    std::cout << "Setting Register Word Size: " << registerWordSize << std::endl;
+                    break;
+                case 4:
+                    multDepth = paramValue;
+                    std::cout << "Setting Multiplicative Depth: " << multDepth << std::endl;
+                    break;
+                default:
+                    std::cout << "Invalid option" << std::endl;
+                    break;
+            }
+            argcCount += 1;
+            std::cout << "argcCount: " << argcCount << std::endl;
+        }
+        std::cout << "Complete !" << std::endl;
+    } else {
+        std::cout << "Using default parameters" << std::endl;
+        std::cout << "First Mod Size: " << firstModSize << std::endl;
+        std::cout << "Scaling Mod Size: " << scalingModSize << std::endl;
+        std::cout << "Register Word Size: " << registerWordSize << std::endl;
+        std::cout << "Multiplicative Depth: " << multDepth << std::endl;
+        std::cout << "Usage: " << argv[0] << " [firstModSize] [scalingModSize] [registerWordSize] [multDepth]" << std::endl;
+    }
+
+
     CCParams<CryptoContextCKKSRNS> parameters;
     parameters.SetMultiplicativeDepth(multDepth);
     parameters.SetFirstModSize(firstModSize);
