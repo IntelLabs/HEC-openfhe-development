@@ -141,6 +141,9 @@ void CryptoParametersRNS::PrecomputeCRTTables(KeySwitchTechnique ksTech, Scaling
                 case 2:
                     sizeP += (sizeP % 2);
                     break;
+                // case 3:
+                //     sizeP += (sizeP % 3);
+                //     break;
                 default:
                     sizeP += (sizeP % 4);
                     break;
