@@ -212,7 +212,7 @@ int64_t BaseSampler::GenerateIntegerKnuthYao() {
 
 void BaseSampler::Initialize(double mean) {
     m_vals.clear();
-    double variance = b_std * b_std;
+    double variance = static_cast<double>(b_std) * static_cast<double>(b_std);
 
     // this value of fin (M) corresponds to the limit for double precision
     // usually the bound of m_std * M is used, whe re M = 20 .. 40 - see DG14 for
