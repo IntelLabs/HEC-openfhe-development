@@ -695,9 +695,10 @@ std::vector<std::vector<std::vector<std::complex<double>>>> CoeffDecodingCollaps
     for (int32_t s = 0; s < rowsCollapse; s++) {
         for (int32_t l = 0; l < layersCollapse; l++) {
             if (l == 0) {
-                coeff[s][0] = coeff1[s * layersCollapse];
-                coeff[s][1] = coeff1[std::log2(slots) + s * layersCollapse];
-                coeff[s][2] = coeff1[2 * std::log2(slots) + s * layersCollapse];
+                int64_t index = static_cast<int64_t>(s) * static_cast<int64_t>(layersCollapse);
+                coeff[s][0] = coeff1[index];
+                coeff[s][1] = coeff1[std::log2(slots) + index];
+                coeff[s][2] = coeff1[2 * std::log2(slots) + index];
             }
             else {
                 std::vector<std::vector<std::complex<double>>> temp = coeff[s];
@@ -708,14 +709,15 @@ std::vector<std::vector<std::vector<std::complex<double>>>> CoeffDecodingCollaps
                 for (uint32_t t = 0; t < 3; t++) {
                     for (int32_t u = 0; u < (1 << (l + 1)) - 1; u++) {
                         for (uint32_t k = 0; k < slots; k++) {
+                            int64_t index = static_cast<int64_t>(s) * static_cast<int64_t>(layersCollapse) + l;
                             if (t == 0)
-                                coeff[s][u][k] += coeff1[s * layersCollapse + l][k] * temp[u][k];
+                                coeff[s][u][k] += coeff1[index][k] * temp[u][k];
                             if (t == 1)
                                 coeff[s][u + (1 << l)][k] +=
-                                    coeff1[s * layersCollapse + l + std::log2(slots)][k] * temp[u][k];
+                                    coeff1[index + std::log2(slots)][k] * temp[u][k];
                             if (t == 2)
                                 coeff[s][u + (1 << (l + 1))][k] +=
-                                    coeff1[s * layersCollapse + l + 2 * std::log2(slots)][k] * temp[u][k];
+                                    coeff1[index + 2 * std::log2(slots)][k] * temp[u][k];
                         }
                     }
                 }
@@ -728,9 +730,10 @@ std::vector<std::vector<std::vector<std::complex<double>>>> CoeffDecodingCollaps
 
         for (int32_t l = 0; l < remCollapse; l++) {
             if (l == 0) {
-                coeff[s][0] = coeff1[s * layersCollapse];
-                coeff[s][1] = coeff1[std::log2(slots) + s * layersCollapse];
-                coeff[s][2] = coeff1[2 * std::log2(slots) + s * layersCollapse];
+                int64_t index = static_cast<int64_t>(s) * static_cast<int64_t>(layersCollapse);
+                coeff[s][0] = coeff1[index];
+                coeff[s][1] = coeff1[std::log2(slots) + index];
+                coeff[s][2] = coeff1[2 * std::log2(slots) + index];
             }
             else {
                 std::vector<std::vector<std::complex<double>>> temp = coeff[s];
@@ -741,14 +744,15 @@ std::vector<std::vector<std::vector<std::complex<double>>>> CoeffDecodingCollaps
                 for (uint32_t t = 0; t < 3; t++) {
                     for (int32_t u = 0; u < (1 << (l + 1)) - 1; u++) {
                         for (uint32_t k = 0; k < slots; k++) {
+                            int64_t index = static_cast<int64_t>(s) * static_cast<int64_t>(layersCollapse) + l;
                             if (t == 0)
-                                coeff[s][u][k] += coeff1[s * layersCollapse + l][k] * temp[u][k];
+                                coeff[s][u][k] += coeff1[index][k] * temp[u][k];
                             if (t == 1)
                                 coeff[s][u + (1 << l)][k] +=
-                                    coeff1[s * layersCollapse + l + std::log2(slots)][k] * temp[u][k];
+                                    coeff1[index + std::log2(slots)][k] * temp[u][k];
                             if (t == 2)
                                 coeff[s][u + (1 << (l + 1))][k] +=
-                                    coeff1[s * layersCollapse + l + 2 * std::log2(slots)][k] * temp[u][k];
+                                    coeff1[index + 2 * std::log2(slots)][k] * temp[u][k];
                         }
                     }
                 }
