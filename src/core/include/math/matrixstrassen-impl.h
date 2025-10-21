@@ -976,8 +976,8 @@ void MatrixStrassen<Element>::block_multiplyCAPS(it_lineardata_t A, it_lineardat
             int uninitializedTemp = 1;
 
             for (int32_t i = 0; i < d.lda; i++) {
-                it_lineardata_t Aelem = A + row + i * d.lda;
-                it_lineardata_t Belem = B + i + d.lda * col;
+                it_lineardata_t Aelem = A + row + static_cast<int64_t>(i) * static_cast<int64_t>(d.lda);
+                it_lineardata_t Belem = B + i + static_cast<int64_t>(d.lda) * static_cast<int64_t>(col);
 
                 if (*Aelem == zeroUniquePtr) {
                     continue;
@@ -985,8 +985,8 @@ void MatrixStrassen<Element>::block_multiplyCAPS(it_lineardata_t A, it_lineardat
                 if (*Belem == zeroUniquePtr) {
                     continue;
                 }
-                Aval = *(A + row + i * d.lda);  // **(A + d.lda * row + i);
-                Bval = *(B + i + d.lda * col);  //  **(B + i * d.lda + col);
+                Aval = *(A + row + static_cast<int64_t>(i) * static_cast<int64_t>(d.lda));  // **(A + d.lda * row + i);
+                Bval = *(B + i + static_cast<int64_t>(d.lda) * static_cast<int64_t>(col));  //  **(B + i * d.lda + col);
                 numMult++;
                 if (uninitializedTemp == 1) {
                     uninitializedTemp = 0;
@@ -999,10 +999,10 @@ void MatrixStrassen<Element>::block_multiplyCAPS(it_lineardata_t A, it_lineardat
             }
 
             if (uninitializedTemp == 1) {  // Because of nulls, temp never got value.
-                *(C + row + d.lda * col) = 0;
+                *(C + row + static_cast<int64_t>(d.lda) * static_cast<int64_t>(col)) = 0;
             }
             else {
-                *(C + row + d.lda * col) = temp;
+                *(C + row + static_cast<int64_t>(d.lda) * static_cast<int64_t>(col)) = temp;
             }
         }
     }
@@ -1091,9 +1091,15 @@ void MatrixStrassen<Element>::distributeFrom1ProcRecCAPS(MatDescriptor desc, it_
         // bottom left
         distributeFrom1ProcRecCAPS(desc, O + entriesPerQuarter, I + desc.lda, ldi);
         // top right
-        distributeFrom1ProcRecCAPS(desc, O + 2 * entriesPerQuarter, I + desc.lda * ldi, ldi);
+        distributeFrom1ProcRecCAPS(desc,
+            O + static_cast<int64_t>(2) * static_cast<int64_t>(entriesPerQuarter),
+            I + static_cast<int64_t>(desc.lda) * static_cast<int64_t>(ldi),
+            ldi);
         // bottom right
-        distributeFrom1ProcRecCAPS(desc, O + 3 * entriesPerQuarter, I + desc.lda * ldi + desc.lda, ldi);
+        distributeFrom1ProcRecCAPS(desc,
+            O + static_cast<int64_t>(3) * static_cast<int64_t>(entriesPerQuarter),
+            I + static_cast<int64_t>(desc.lda) * static_cast<int64_t>(ldi) + desc.lda,
+            ldi);
     }
 }
 
@@ -1145,9 +1151,9 @@ void MatrixStrassen<Element>::collectTo1ProcRecCAPS(MatDescriptor desc, it_linea
         // bottom left
         collectTo1ProcRecCAPS(desc, O + desc.lda, I + entriesPerQuarter, ldo);
         // top right
-        collectTo1ProcRecCAPS(desc, O + desc.lda * ldo, I + 2 * entriesPerQuarter, ldo);
+        collectTo1ProcRecCAPS(desc, O + static_cast<int64_t>(desc.lda) * static_cast<int64_t>(ldo), I + static_cast<int64_t>(2) * static_cast<int64_t>(entriesPerQuarter), ldo);
         // bottom right
-        collectTo1ProcRecCAPS(desc, O + desc.lda * ldo + desc.lda, I + 3 * entriesPerQuarter, ldo);
+        collectTo1ProcRecCAPS(desc, O + static_cast<int64_t>(desc.lda) * static_cast<int64_t>(ldo) + desc.lda, I + static_cast<int64_t>(3) * static_cast<int64_t>(entriesPerQuarter), ldo);
     }
 }
 
