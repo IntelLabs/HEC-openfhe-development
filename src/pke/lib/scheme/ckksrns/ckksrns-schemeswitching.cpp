@@ -570,12 +570,13 @@ void SWITCHCKKSRNS::FitToNativeVector(uint32_t ringDim, const std::vector<int64_
     uint32_t dslots    = vec.size();
     uint32_t gap       = ringDim / dslots;
     for (usint i = 0; i < vec.size(); i++) {
+        const auto index = static_cast<size_t>(gap) * static_cast<size_t>(i);
         NativeInteger n(vec[i]);
         if (n > bigValueHf) {
-            (*nativeVec)[gap * i] = n.ModSub(diff, modulus);
+            (*nativeVec)[index] = n.ModSub(diff, modulus);
         }
         else {
-            (*nativeVec)[gap * i] = n.Mod(modulus);
+            (*nativeVec)[index] = n.Mod(modulus);
         }
     }
 }
@@ -986,11 +987,12 @@ Ciphertext<DCRTPoly> SWITCHCKKSRNS::EvalLTWithPrecomputeSwitch(const CryptoConte
     DCRTPoly first;
 
     for (uint32_t j = 0; j < gStep; j++) {
-        Ciphertext<DCRTPoly> inner = EvalMultExt(cc.KeySwitchExt(ctxt, true), A[bStep * j]);
+        const auto index = static_cast<size_t>(bStep) * static_cast<size_t>(j);
+        Ciphertext<DCRTPoly> inner = EvalMultExt(cc.KeySwitchExt(ctxt, true), A[index]);
 
         for (uint32_t i = 1; i < bStep; i++) {
-            if (bStep * j + i < slots) {
-                EvalAddExtInPlace(inner, EvalMultExt(fastRotation[i - 1], A[bStep * j + i]));
+            if (index + i < slots) {
+                EvalAddExtInPlace(inner, EvalMultExt(fastRotation[i - 1], A[index + i]));
             }
         }
 
@@ -1088,13 +1090,14 @@ Ciphertext<DCRTPoly> SWITCHCKKSRNS::EvalLTRectWithPrecomputeSwitch(
 
     for (uint32_t j = 0; j < gStep; j++) {
         int32_t offset = (j == 0) ? 0 : -static_cast<int32_t>(bStep * j);
-        auto temp      = cc.MakeCKKSPackedPlaintext(Rotate(Fill(A[bStep * j], N / 2), offset), 1, towersToDrop,
+        const auto adjustedIndex = static_cast<size_t>(bStep) * static_cast<size_t>(j);
+        auto temp      = cc.MakeCKKSPackedPlaintext(Rotate(Fill(A[adjustedIndex], N / 2), offset), 1, towersToDrop,
                                                     elementParamsPtr2, N / 2);
         Ciphertext<DCRTPoly> inner = EvalMultExt(cc.KeySwitchExt(ct, true), temp);
 
         for (uint32_t i = 1; i < bStep; i++) {
-            if (bStep * j + i < n) {
-                auto tempi = cc.MakeCKKSPackedPlaintext(Rotate(Fill(A[bStep * j + i], N / 2), offset), 1, towersToDrop,
+            if (adjustedIndex + i < n) {
+                auto tempi = cc.MakeCKKSPackedPlaintext(Rotate(Fill(A[adjustedIndex + i], N / 2), offset), 1, towersToDrop,
                                                         elementParamsPtr2, N / 2);
                 EvalAddExtInPlace(inner, EvalMultExt(fastRotation[i - 1], tempi));
             }
@@ -1110,14 +1113,14 @@ Ciphertext<DCRTPoly> SWITCHCKKSRNS::EvalLTRectWithPrecomputeSwitch(
         else {
             inner = cc.KeySwitchDown(inner);
             // Find the automorphism index that corresponds to rotation index index.
-            usint autoIndex = FindAutomorphismIndex2nComplex(bStep * j, M);
+            usint autoIndex = FindAutomorphismIndex2nComplex(adjustedIndex, M);
             std::vector<usint> map(N);
             PrecomputeAutoMap(N, autoIndex, &map);
             DCRTPoly firstCurrent = inner->GetElements()[0].AutomorphismTransform(autoIndex, map);
             first += firstCurrent;
 
             auto innerDigits = cc.EvalFastRotationPrecompute(inner);
-            EvalAddExtInPlace(result, cc.EvalFastRotationExt(inner, bStep * j, innerDigits, false));
+            EvalAddExtInPlace(result, cc.EvalFastRotationExt(inner, adjustedIndex, innerDigits, false));
         }
     }
     result        = cc.KeySwitchDown(result);
