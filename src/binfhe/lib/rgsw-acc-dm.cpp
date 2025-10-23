@@ -51,8 +51,11 @@ RingGSWACCKey RingGSWAccumulatorDM::KeyGenAcc(const std::shared_ptr<RingGSWCrypt
         for (int32_t j = 1; j < baseR; ++j) {
             for (size_t k = 0; k < digitsR.size(); ++k) {
                 auto s{sv[i].ConvertToInt<int32_t>()};
-                (*ek)[i][j][k] =
-                    KeyGenDM(params, skNTT, (s > modHalf ? s - mod : s) * j * digitsR[k].ConvertToInt<int32_t>());
+                const auto adjusted_s = (s > modHalf ? s - mod : s);
+                const auto digitsR_k = digitsR[k].ConvertToInt<int64_t>();
+                const auto product = static_cast<int64_t>(adjusted_s) * static_cast<int64_t>(j) * digitsR_k;
+
+                (*ek)[i][j][k] = KeyGenDM(params, skNTT, static_cast<LWEPlaintext>(product));
             }
         }
     }
