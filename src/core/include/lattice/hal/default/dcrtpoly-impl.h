@@ -1776,7 +1776,7 @@ void DCRTPolyImpl<VecType>::FastBaseConvqToBskMontgomery(
         mu.push_back(q.ComputeMu());
 
     // first we twist xi by mtilde*(q/qi)^-1 mod qi
-    std::vector<NativeInteger> ximtildeQHatModqi(n * numQ);
+    std::vector<NativeInteger> ximtildeQHatModqi(static_cast<size_t>(n) * static_cast<size_t>(numQ));
     std::vector<uint64_t> result_mtilde(n, 0);
     for (uint32_t i = 0; i < numQ; ++i) {
         const auto& mtildeQHatInvModqi       = mtildeQHatInvModq[i];
@@ -1862,29 +1862,30 @@ void DCRTPolyImpl<VecType>::FastRNSFloorq(
             m_vectors[i][k].ModMulFastConstEq(tqDivqiModqi, moduliQi, tqDivqiModqiPrecon);
     }
 
-    std::vector<NativeInteger> txiqiDivqModqi(n * numBsk);
+    std::vector<NativeInteger> txiqiDivqModqi(static_cast<size_t>(n) * static_cast<size_t>(numBsk));
 #pragma omp parallel for num_threads(OpenFHEParallelControls.GetThreadLimit(numBsk))
     for (uint32_t j = 0; j < numBsk; ++j) {
         const auto& moduliBskj         = moduliBsk[j];
         const auto& tDivqModBskj       = tQInvModbsk[j];
         const auto& tDivqModBskjPrecon = tQInvModbskPrecon[j];
         for (uint32_t k = 0; k < n; ++k) {
+            size_t idx = static_cast<size_t>(j) * static_cast<size_t>(n) + k;
 #if defined(HAVE_INT128) && NATIVEINT == 64
             DoubleNativeInt aq = 0;
             for (uint32_t i = 0; i < numQ; ++i) {
                 const auto& xi = m_vectors[i][k];
                 aq += Mul128(xi.template ConvertToInt<uint64_t>(), qInvModbsk[i][j].ConvertToInt<uint64_t>());
             }
-            txiqiDivqModqi[j * n + k] = BarrettUint128ModUint64(aq, moduliBskj.ConvertToInt(), modbskBarrettMu[j]);
+            txiqiDivqModqi[idx] = BarrettUint128ModUint64(aq, moduliBskj.ConvertToInt(), modbskBarrettMu[j]);
 #else
             for (uint32_t i = 0; i < numQ; ++i) {
                 const auto& xi = m_vectors[i][k];
-                txiqiDivqModqi[j * n + k].ModAddFastEq(xi.ModMul(qInvModbsk[i][j], moduliBskj, mu[j]), moduliBskj);
+                txiqiDivqModqi[idx].ModAddFastEq(xi.ModMul(qInvModbsk[i][j], moduliBskj, mu[j]), moduliBskj);
             }
 #endif
             // now we have FastBaseConv( |t*ct|q, q, Bsk ) in txiqiDivqModqi
             m_vectors[numQ + j][k].ModMulFastConstEq(tDivqModBskj, moduliBskj, tDivqModBskjPrecon);
-            m_vectors[numQ + j][k].ModSubFastEq(txiqiDivqModqi[j * n + k], moduliBskj);
+            m_vectors[numQ + j][k].ModSubFastEq(txiqiDivqModqi[idx], moduliBskj);
         }
     }
 }
