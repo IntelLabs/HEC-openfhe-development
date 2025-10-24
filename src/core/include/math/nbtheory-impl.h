@@ -490,8 +490,10 @@ template <typename IntVector>
 IntVector PolynomialPower(const IntVector& input, usint power) {
     usint finalDegree = (input.GetLength() - 1) * power;
     IntVector finalPoly(finalDegree + 1, input.GetModulus());
-    for (usint i = 0; i < input.GetLength(); ++i)
-        finalPoly[i * power] = input[i];
+    for (usint i = 0; i < input.GetLength(); ++i) {
+        size_t index = static_cast<size_t>(i) * static_cast<size_t>(power);
+        finalPoly[index] = input[i];
+    }
     return finalPoly;
 }
 
