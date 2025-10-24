@@ -602,11 +602,12 @@ void CKKSPackedEncoding::FitToNativeVector(const std::vector<int64_t>& vec, int6
     uint32_t gap       = ringDim / dslots;
     for (usint i = 0; i < vec.size(); i++) {
         NativeInteger n(vec[i]);
+        size_t index = static_cast<size_t>(gap) * static_cast<size_t>(i); 
         if (n > bigValueHf) {
-            (*nativeVec)[gap * i] = n.ModSub(diff, modulus);
+            (*nativeVec)[index] = n.ModSub(diff, modulus);
         }
         else {
-            (*nativeVec)[gap * i] = n.Mod(modulus);
+            (*nativeVec)[index] = n.Mod(modulus);
         }
     }
 }
