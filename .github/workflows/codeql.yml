@@ -101,7 +101,7 @@ jobs:
         category: "/language:${{matrix.language}}"
 
     - name: Upload CodeQL SARIF
-      uses: actions/upload-artifact@v4
+      uses: github/codeql-action/upload-sarif@v3
       with:
-        name: codeql-sarif
-        path: ./codeql-results/**/*.sarif
+        # Path to SARIF file relative to the root of the repository
+        sarif_file: results.sarif
